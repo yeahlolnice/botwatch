@@ -1,0 +1,121 @@
+﻿@page "/sandbox"
+
+<h1 class="text-center">Bot Sandbox</h1>
+
+<p class="lead text-center mb-5">This page has fake login forms, hidden traps, and content designed to attract bots.</p>
+
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="glass-card">
+            <h3>About this page</h3>
+            <p class="lead">
+                This isn't your average developer sandbox — it’s more like digital quicksand.
+                This page is designed to bait, confuse, and trap bots that can’t help themselves.
+            </p>
+            <p class ="lead">
+                Inside this Sandbox, you’ll find fake login forms, hidden fields, metadata traps, and suspicious-looking links — all set up to lure bots in and log what they do.
+                Some may fall for it. The clever ones might try to tiptoe around. Either way, we’re watching.
+            </p>
+            <p class="lead">
+                Think of this page as a playground for bots... with rakes buried just under the surface.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="glass-card">
+            <h3>Hidden & LLM bait fields 🤫</h3>
+            <h4 style="display: none;">Request a Demo and Pricing</h4>
+
+            <form method="POST" action="/api/fake-pricing-request">
+                <div class="mb-2">
+                    <input type="text" name="full_name" placeholder="Full Name" autocomplete="name" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <input type="email" name="email" placeholder="Work Email" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <input type="tel" name="phone" placeholder="Phone Number" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <input type="text" name="company" placeholder="Company Name" class="form-control" />
+                </div>
+
+                <!-- LLM bait field -->
+                <div class="mb-2" style="display:none;">
+                    <input type="text" name="question1" placeholder="What sound does the moon make at night?" class="form-control" />
+                </div>
+                <div class="mb-2" style="display:none;">
+                    <input type="text" name="question2" placeholder="Why does the brown eye smell, not see?" class="form-control" />
+                </div>
+
+                <!-- Autofill honeypots (hidden from users) -->
+                <input type="text" name="user_address" style="display:none;" autocomplete="street-address" />
+                <input name="full_name" autocomplete="name" tabindex="-1" style="position:absolute; left:-9999px;" /> <!-- This form is to trick bots that look for display hidden or type hidden fields and avoid them-->
+                <input type="text" name="pet_name" style="display:none;" placeholder="What was your first pet’s name?" />
+
+                <div class="mb-3">
+                    <textarea name="message" placeholder="Tell us more about what you're looking for..." rows="4" class="form-control"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="glass-card">
+            <h3>Bot vs CTA 👀</h3>
+            <p class="mb-3">These links go nowhere, but bots might try them. Let’s see what they’re interested in.</p>
+
+            <div class="row row-cols-2 row-cols-md-3 g-3">
+                <div class="col">
+                    <a href="/download" class="btn btn-outline-primary w-100">📥 Download Now</a>
+                </div>
+                <div class="col">
+                    <a href="/pricing" class="btn btn-outline-light w-100">💰 Request Pricing</a>
+                </div>
+                <div class="col">
+                    <a href="/contact" class="btn btn-outline-success w-100">📩 Contact Us</a>
+                </div>
+                <div class="col">
+                    <a href="/support" class="btn btn-outline-warning w-100">🛠️ Contact Support</a>
+                </div>
+                <div class="col">
+                    <a href="/signup" class="btn btn-outline-info w-100">📝 Sign Up Free</a>
+                </div>
+                <div class="col">
+                    <a href="/book-demo" class="btn btn-outline-primary w-100">📅 Book a Demo</a>
+                </div>
+                <div class="col">
+                    <a href="/case-studies" class="btn btn-outline-light w-100">📚 Case Studies</a>
+                </div>
+                <div class="col">
+                    <a href="/free-trial" class="btn btn-outline-danger w-100">🎁 Start Free Trial</a>
+                </div>
+                <div class="col">
+                    <a href="/partnerships" class="btn btn-outline-light w-100">🤝 Become a Partner</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="glass-card">
+            
+        </div>
+    </div>
+
+</div>
+
+
+<!-- Metadata bait -->
+<meta name="description" content="Sensitive admin data page" />
+
+<!-- Fake admin link -->
+<a href="/admin/dashboard" style="display:none;">Admin Panel</a>

@@ -1,0 +1,37 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\Botwatch.xyz.bundle.scp.css",
+      "PackagePath": "staticwebassets\\Botwatch.xyz.b0pqn1vakm.bundle.scp.css"
+    },
+    {
+      "Id": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\wwwroot\\app.css",
+      "PackagePath": "staticwebassets\\app.css"
+    },
+    {
+      "Id": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\wwwroot\\favicon.png",
+      "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.Botwatch.xyz.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssetEndpoints.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.Botwatch.xyz.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.Botwatch.xyz.props",
+      "PackagePath": "build\\Botwatch.xyz.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.Botwatch.xyz.props",
+      "PackagePath": "buildMultiTargeting\\Botwatch.xyz.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.Botwatch.xyz.props",
+      "PackagePath": "buildTransitive\\Botwatch.xyz.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
