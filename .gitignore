@@ -1,0 +1,12 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/Botwatch.xyz/appsettings.json
+/Botwatch.xyz/bin/Debug/net8.0
+/Botwatch.xyz/obj
+/Botwatch.xyz/Botwatch.xyz.csproj
+/Botwatch.xyz/Botwatch.xyz.csproj.user
+/Botwatch.xyz/Migrations
+/.vs/botwatch/v17
+/.vs/Botwatch-Website/FileContentIndex

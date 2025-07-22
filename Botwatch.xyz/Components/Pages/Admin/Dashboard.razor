@@ -1,0 +1,35 @@
+﻿@page "/admin/dashboard"
+@using Botwatch.Data
+@using Botwatch.Services
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+@inject BotContext Db
+@inject NavigationManager Nav
+@inject IHttpContextAccessor HttpContextAccessor
+@inject AdminAuthService AuthService
+
+@if (!AuthService.IsAdminAuthenticated)
+{
+    <p>Redirecting to login...</p>
+    @code {
+    protected override void OnInitialized()
+    {
+        Nav.NavigateTo("/admin");
+    }
+    }
+}
+else
+{
+    <h3>Admin Dashboard</h3>
+    <p>Welcome, you're signed in.</p>
+    <button @onclick="Logout" class="btn btn-danger">Logout</button>
+}
+
+@code {
+    private void Logout()
+    {
+        AuthService.SignOut();
+        Nav.NavigateTo("/admin");
+    }
+}
