@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Botwatch.xyz")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1f196fbaaa91356e9f954754d285267286110c51")]
 [assembly: System.Reflection.AssemblyProductAttribute("Botwatch.xyz")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Botwatch.xyz")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

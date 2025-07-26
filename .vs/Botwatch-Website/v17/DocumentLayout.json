@@ -1,25 +1,41 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Documents\\Github Repos\\Botwatch-Website\\",
+  "WorkspaceRootPath": "C:\\Users\\User\\Documents\\code\\botwatch\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\documents\\github repos\\botwatch-website\\botwatch.xyz\\components\\pages\\sandbox.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\components\\pages\\adminlogin.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\pages\\adminlogin.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\components\\pages\\admin\\dashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\pages\\admin\\dashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\components\\pages\\sandbox.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\pages\\sandbox.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\documents\\github repos\\botwatch-website\\botwatch.xyz\\components\\pages\\about.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\pages\\about.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\documents\\github repos\\botwatch-website\\botwatch.xyz\\components\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\components\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\documents\\github repos\\botwatch-website\\botwatch.xyz\\wwwroot\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\components\\pages\\about.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\pages\\about.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\wwwroot\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
       "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\wwwroot\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\documents\\github repos\\botwatch-website\\botwatch.xyz\\components\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "AbsoluteMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|c:\\users\\user\\documents\\code\\botwatch\\botwatch.xyz\\components\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{C7597E67-0257-499D-B5CC-97A87D12E46B}|Botwatch.xyz\\Botwatch.xyz.csproj|solutionrelative:botwatch.xyz\\components\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     }
   ],
@@ -30,7 +46,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -42,24 +58,76 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Dashboard.razor",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\Admin\\Dashboard.razor",
+              "RelativeDocumentMoniker": "Botwatch.xyz\\Components\\Pages\\Admin\\Dashboard.razor",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\Admin\\Dashboard.razor",
+              "RelativeToolTip": "Botwatch.xyz\\Components\\Pages\\Admin\\Dashboard.razor",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAABEAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-07-22T12:27:24.659Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Program.cs",
+              "RelativeDocumentMoniker": "Botwatch.xyz\\Program.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Program.cs",
+              "RelativeToolTip": "Botwatch.xyz\\Program.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAACIAAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-22T11:51:05.196Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AdminLogin.razor",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\AdminLogin.razor",
+              "RelativeDocumentMoniker": "Botwatch.xyz\\Components\\Pages\\AdminLogin.razor",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\AdminLogin.razor",
+              "RelativeToolTip": "Botwatch.xyz\\Components\\Pages\\AdminLogin.razor",
+              "ViewState": "AgIAACIAAAAAAAAAAAAowCsAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-07-22T11:42:51.971Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\appsettings.json",
+              "RelativeDocumentMoniker": "Botwatch.xyz\\appsettings.json",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\appsettings.json",
+              "RelativeToolTip": "Botwatch.xyz\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-07-22T11:26:24.773Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "Sandbox.razor",
-              "DocumentMoniker": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Pages\\Sandbox.razor",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\Sandbox.razor",
               "RelativeDocumentMoniker": "Botwatch.xyz\\Components\\Pages\\Sandbox.razor",
-              "ToolTip": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Pages\\Sandbox.razor",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\Sandbox.razor",
               "RelativeToolTip": "Botwatch.xyz\\Components\\Pages\\Sandbox.razor",
-              "ViewState": "AgIAAEgAAAAAAAAAAAAswGcAAAAOAAAAAAAAAA==",
+              "ViewState": "AgIAABAAAAAAAAAAAAAAAA0AAABhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-07-22T00:51:51.008Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 6,
               "Title": "About.razor",
-              "DocumentMoniker": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Pages\\About.razor",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\About.razor",
               "RelativeDocumentMoniker": "Botwatch.xyz\\Components\\Pages\\About.razor",
-              "ToolTip": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Pages\\About.razor",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\About.razor",
               "RelativeToolTip": "Botwatch.xyz\\Components\\Pages\\About.razor",
               "ViewState": "AgIAADkAAAAAAAAAAAAAAE4AAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
@@ -68,39 +136,39 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 5,
               "Title": "Home.razor",
-              "DocumentMoniker": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Pages\\Home.razor",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\Home.razor",
               "RelativeDocumentMoniker": "Botwatch.xyz\\Components\\Pages\\Home.razor",
-              "ToolTip": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Pages\\Home.razor",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Pages\\Home.razor",
               "RelativeToolTip": "Botwatch.xyz\\Components\\Pages\\Home.razor",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAWAAAAAAAAAA==",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAcwDMAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-07-21T23:46:05.645Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 7,
               "Title": "app.css",
-              "DocumentMoniker": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\wwwroot\\app.css",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\wwwroot\\app.css",
               "RelativeDocumentMoniker": "Botwatch.xyz\\wwwroot\\app.css",
-              "ToolTip": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\wwwroot\\app.css",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\wwwroot\\app.css",
               "RelativeToolTip": "Botwatch.xyz\\wwwroot\\app.css",
-              "ViewState": "AgIAABsAAAAAAAAAAAAAADAAAAAGAAAAAAAAAA==",
+              "ViewState": "AgIAABgAAAAAAAAAAIBJwDAAAAAGAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
               "WhenOpened": "2025-07-21T23:15:45.755Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 8,
               "Title": "NavMenu.razor",
-              "DocumentMoniker": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Layout\\NavMenu.razor",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Layout\\NavMenu.razor",
               "RelativeDocumentMoniker": "Botwatch.xyz\\Components\\Layout\\NavMenu.razor",
-              "ToolTip": "C:\\Documents\\Github Repos\\Botwatch-Website\\Botwatch.xyz\\Components\\Layout\\NavMenu.razor",
+              "ToolTip": "C:\\Users\\User\\Documents\\code\\botwatch\\Botwatch.xyz\\Components\\Layout\\NavMenu.razor",
               "RelativeToolTip": "Botwatch.xyz\\Components\\Layout\\NavMenu.razor",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAAABYAAAApAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAIBJwBYAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-07-21T23:13:05.681Z",
               "EditorCaption": ""
