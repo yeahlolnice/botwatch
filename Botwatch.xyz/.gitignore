@@ -1,2 +1,7 @@
 appsettings.*.json
-
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.log
