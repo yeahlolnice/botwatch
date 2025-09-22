@@ -10,6 +10,7 @@ namespace Botwatch.Data
         public DbSet<BotRequest> BotRequests { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<AdminLoginAttempt> AdminLoginAttempts { get; set; }
+        public DbSet<TrackingEvent> TrackingEvents { get; set; }
     }
 
     public class BotRequest

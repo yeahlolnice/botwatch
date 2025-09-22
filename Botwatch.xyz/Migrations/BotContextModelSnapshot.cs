@@ -97,6 +97,58 @@ namespace Botwatch.xyz.Migrations
                     b.ToTable("BotRequests");
                 });
 
+            modelBuilder.Entity("Botwatch.Data.TrackingEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FormDataJson")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("HoneypotTriggered")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Ip")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Referer")
+                        .HasColumnType("text");
+
+                    b.Property<long?>("TimeToSubmitMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Utc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VisitorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrackingEvents");
+                });
+
             modelBuilder.Entity("Botwatch.Data.User", b =>
                 {
                     b.Property<int>("Id")
