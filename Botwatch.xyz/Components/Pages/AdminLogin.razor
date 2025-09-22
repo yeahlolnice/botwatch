@@ -30,7 +30,7 @@
         <div class="alert alert-danger">@ErrorMessage</div>
     }
     <p>Username: @LoginModel.Username</p>
-    <EditForm Model="LoginModel" FormName="AdminLoginForm" OnValidSubmit="HandleLogin">
+    <EditForm @ref="LoginModel" Model="LoginModel" FormName="AdminLoginForm" OnValidSubmit="HandleLogin">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
@@ -39,7 +39,7 @@
             <ValidationMessage For="@(() => LoginModel.Username)" />
         </div>
         <div class="mb-3">
-            <InputText class="form-control" @bind-Value="LoginModel.Password" placeholder="Password" type="password" />
+            <InputText @ref="PasswordComponent" class="form-control" @bind-Value="LoginModel.Password" placeholder="Password" type="password" />
             <ValidationMessage For="@(() => LoginModel.Password)" />
         </div>
         <button type="submit" class="btn btn-primary">Login</button>
@@ -48,7 +48,8 @@
 
 
 @code {
-    private LoginForm LoginModel = new();
+    //private LoginForm LoginModel = new();
+    private EditForm LoginModel { get; set; } = default!;
     private string ErrorMessage;
 
     public class LoginForm
