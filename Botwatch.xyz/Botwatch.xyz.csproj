@@ -1,0 +1,80 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs" />
+    <Compile Include="obj\Debug\net8.0\Botwatch.xyz.AssemblyInfo.cs" />
+    <Compile Include="obj\Debug\net8.0\Botwatch.xyz.GlobalUsings.g.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="obj\Botwatch.xyz.csproj.nuget.dgspec.json" />
+    <Content Include="obj\Debug\net8.0\ApiEndpoints.json" />
+    <Content Include="obj\Debug\net8.0\Botwatch.xyz.csproj.FileListAbsolute.txt" />
+    <Content Include="obj\Debug\net8.0\Botwatch.xyz.sourcelink.json" />
+    <Content Include="obj\Debug\net8.0\scopedcss\bundle\Botwatch.xyz.styles.css" />
+    <Content Include="obj\Debug\net8.0\scopedcss\Components\Layout\MainLayout.razor.rz.scp.css" />
+    <Content Include="obj\Debug\net8.0\scopedcss\Components\Layout\NavMenu.razor.rz.scp.css" />
+    <Content Include="obj\Debug\net8.0\scopedcss\projectbundle\Botwatch.xyz.bundle.scp.css" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.build.endpoints.json" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.build.json" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.development.json" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.pack.json" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.references.upToDateCheck.txt" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.removed.txt" />
+    <Content Include="obj\Debug\net8.0\staticwebassets.upToDateCheck.txt" />
+    <Content Include="obj\project.assets.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="obj\Botwatch.xyz.csproj.EntityFrameworkCore.targets" />
+    <None Include="obj\Botwatch.xyz.csproj.nuget.g.props" />
+    <None Include="obj\Botwatch.xyz.csproj.nuget.g.targets" />
+    <None Include="obj\Debug\net8.0\apphost.exe" />
+    <None Include="obj\Debug\net8.0\Botwatch.F27811EA.Up2Date" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.assets.cache" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.csproj.AssemblyReference.cache" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.csproj.BuildWithSkipAnalyzers" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.csproj.CoreCompileInputs.cache" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.dll" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.genruntimeconfig.cache" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.MvcApplicationPartsAssemblyInfo.cache" />
+    <None Include="obj\Debug\net8.0\Botwatch.xyz.pdb" />
+    <None Include="obj\Debug\net8.0\refint\Botwatch.xyz.dll" />
+    <None Include="obj\Debug\net8.0\ref\Botwatch.xyz.dll" />
+    <None Include="obj\Debug\net8.0\staticwebassets\msbuild.Botwatch.xyz.Microsoft.AspNetCore.StaticWebAssetEndpoints.props" />
+    <None Include="obj\Debug\net8.0\staticwebassets\msbuild.Botwatch.xyz.Microsoft.AspNetCore.StaticWebAssets.props" />
+    <None Include="obj\Debug\net8.0\staticwebassets\msbuild.build.Botwatch.xyz.props" />
+    <None Include="obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.Botwatch.xyz.props" />
+    <None Include="obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.Botwatch.xyz.props" />
+    <None Include="obj\project.nuget.cache" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql" Version="9.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
+
+</Project>

@@ -1,7 +1,56 @@
-appsettings.*.json
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.exe
+*.dll
+*.pdb
+
+# Visual Studio
 .vs/
-bin/
-obj/
 *.user
 *.suo
-*.log
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuspec
+packages/
+*.nuget.props
+*.nuget.targets
+
+# ASP.NET / Blazor
+wwwroot/dist/
+wwwroot/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/dist
+/build
+
+# Publish outputs
+*.publish.xml
+publish/
+artifacts/
+
+# Coverage / test results
+*.coverage
+*.coveragexml
+TestResult*/
+*.TestResults/
+*.trx
+
+# Others
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
