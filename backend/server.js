@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
 
@@ -25,6 +26,8 @@ app.use(( err, req, res, next) => {
 app.get('/', (req, res) => {
     res.send('Botwatch API is running');
 });
+
+app.use('/api/users', userRoutes);
 
 
 app.listen(PORT, () => {
