@@ -1,5 +1,5 @@
 import { query } from "../utilities/connectDB.js";
-import { createUsersTableQuery, createRoleQuery, createUserQuery, updateUserQuery, deleteUserQuery, getAllUsersQuery, getUserByIdQuery } from "../utilities/sqlQuery.js";
+import { createUsersTableQuery, createRoleQuery, createUserQuery, updateUserQuery, deleteUserQuery, getAllUsersQuery, getUserByIdQuery } from "../utilities/sqlUserQuerys.js";
 
 const getAllUsers = async (req, res) => {
    try {

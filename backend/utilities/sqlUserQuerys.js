@@ -1,4 +1,3 @@
-import { getAllUsers } from "../controllers/userControllers.js";
 
 export const createRoleQuery = `
     CREATE TYPE role_type AS ENUM('admin', 'user');
