@@ -1,0 +1,26 @@
+// ignore all common files for react and express app with postgres database
+
+/build
+/dist
+node_modules/
+.env
+.DS_Store
+/logs
+*.log
+/coverage
+/webpack.config.js
+/tsconfig.json
+/.vscode
+/idea
+/.env.local
+/.env.development
+/.env.production
+/.env.test
+/.env.*.local
+/.eslintcache
+/.prettiercache
+/.next
+/.nuxt
+/.cache
+/.parcel-cache
+/.serverless
