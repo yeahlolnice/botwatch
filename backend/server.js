@@ -17,6 +17,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust cloudflared's forwarded headers so req.ip reflects the real client IP
+app.set('trust proxy', true);
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDist = join(__dirname, '../frontend/dist');
 

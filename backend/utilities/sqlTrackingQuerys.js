@@ -95,7 +95,7 @@ SELECT
     id, request_id, timestamp,
     method, path, full_url, query_params,
     status_code, response_time_ms,
-    ip_address, x_forwarded_for,
+    ip_address, x_forwarded_for, cf_connecting_ip,
     user_agent, referrer,
     bot_label, crawler_type, bot_score,
     is_trap, trap_type,
