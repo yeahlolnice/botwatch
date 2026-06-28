@@ -8,7 +8,9 @@ const SIGNATURES = [
     // ── SQL Injection ─────────────────────────────────────────────────────────
     { id: 'sqli_union',       category: 'sqli',     score: 40, pattern: /union\s+select/i },
     { id: 'sqli_or_true',     category: 'sqli',     score: 35, pattern: /(\bor\b|\band\b)\s+[\w'"]+\s*=\s*[\w'"]+/i },
-    { id: 'sqli_comment',     category: 'sqli',     score: 30, pattern: /(--|#|\/\*)\s*([\w\s]|$)/i },
+    // -- and # must be preceded by a quote, paren, or digit (SQL context)
+    // /* must not be preceded by * (avoids matching Accept: */* header)
+    { id: 'sqli_comment',     category: 'sqli',     score: 30, pattern: /(?<=['")\d])\s*(--|#)|(?<!\*)\/\*/i },
     { id: 'sqli_sleep',       category: 'sqli',     score: 50, pattern: /\b(sleep|benchmark|pg_sleep|waitfor\s+delay)\s*\(/i },
     { id: 'sqli_drop',        category: 'sqli',     score: 60, pattern: /\b(drop|truncate|alter)\s+(table|database|schema)\b/i },
     { id: 'sqli_information', category: 'sqli',     score: 45, pattern: /information_schema|sys\.tables|pg_catalog/i },
