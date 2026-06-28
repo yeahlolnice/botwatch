@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '../api.js'
 import './Dashboard.css'
 
 const TYPE_COLORS = {
@@ -182,14 +183,9 @@ export default function Dashboard() {
         setLoading(true)
         setError(null)
         try {
-            const [trafficRes, statsRes] = await Promise.all([
-                fetch(`/api/traffic?limit=50&page=${page}`),
-                fetch('/api/traffic/stats'),
-            ])
-            if (!trafficRes.ok || !statsRes.ok) throw new Error('API error')
             const [trafficData, statsData] = await Promise.all([
-                trafficRes.json(),
-                statsRes.json(),
+                apiFetch(`/api/traffic?limit=50&page=${page}`),
+                apiFetch('/api/traffic/stats'),
             ])
             setTraffic(trafficData.data)
             setPagination(trafficData.pagination)
