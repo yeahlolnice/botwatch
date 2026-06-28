@@ -106,7 +106,8 @@ function RequestDetail({ request, onClose }) {
                         <h4>Request Info</h4>
                         <dl>
                             <dt>Timestamp</dt><dd>{new Date(request.timestamp).toISOString()}</dd>
-                            <dt>IP Address</dt><dd className="mono">{request.ip_address || '—'}</dd>
+                            <dt>IP Address</dt><dd className="mono">{request.cf_connecting_ip || request.ip_address || '—'}</dd>
+                            <dt>CF-Connecting-IP</dt><dd className="mono">{request.cf_connecting_ip || '—'}</dd>
                             <dt>X-Forwarded-For</dt><dd className="mono">{request.x_forwarded_for || '—'}</dd>
                             <dt>Status</dt><dd style={{ color: statusColor(request.status_code) }}>{request.status_code || '—'}</dd>
                             <dt>Response Time</dt><dd>{request.response_time_ms != null ? `${request.response_time_ms}ms` : '—'}</dd>
@@ -320,7 +321,10 @@ export default function Dashboard() {
                                             </span>
                                         </td>
                                         <td className="td-ms">{r.response_time_ms != null ? `${r.response_time_ms}ms` : '—'}</td>
-                                        <td className="td-ip">{r.ip_address || '—'}</td>
+                                        <td className="td-ip">
+                                            {r.cf_connecting_ip || r.ip_address || '—'}
+                                            {r.cf_connecting_ip && <span className="cf-pip" title="Real IP via CF-Connecting-IP">CF</span>}
+                                        </td>
                                         <td>
                                             {r.bot_score > 0
                                                 ? <span className="score-badge" style={{ color: scoreColor(r.bot_score), borderColor: scoreColor(r.bot_score) }}>{r.bot_score}</span>

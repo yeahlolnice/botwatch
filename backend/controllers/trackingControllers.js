@@ -33,11 +33,16 @@ const trackRequest = (req, res, next) => {
             const { method, path, query: queryParams, headers, body } = req;
             const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
 
-            // IP resolution — prefer real client IP from proxy headers
-            const ipAddress = req.ip || null;
-            const xForwardedFor = headers['x-forwarded-for'] || null;
+            // IP resolution — CF-Connecting-IP is the verified real client IP
+            // when behind a Cloudflare tunnel. Fall back through the chain.
             const cfConnectingIp = headers['cf-connecting-ip'] || null;
+            const xForwardedFor = headers['x-forwarded-for'] || null;
             const realIp = headers['x-real-ip'] || null;
+            const ipAddress = cfConnectingIp
+                || realIp
+                || (xForwardedFor ? xForwardedFor.split(',')[0].trim() : null)
+                || req.ip
+                || null;
 
             const userAgent = headers['user-agent'] || null;
             const referrer = req.get('Referrer') || null;

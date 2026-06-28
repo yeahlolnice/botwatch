@@ -253,6 +253,21 @@
     white-space: nowrap;
 }
 
+.cf-pip {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    color: #f97316;
+    font-size: 9px;
+    font-family: var(--font);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+}
+
 .score-badge {
     display: inline-block;
     padding: 1px 7px;
