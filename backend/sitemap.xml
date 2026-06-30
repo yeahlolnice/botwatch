@@ -1,0 +1,13 @@
+<!-- site map for 3 pages botwatch.xyz /, /intel /, /login-->   
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://botwatch.xyz/</loc>
+    </url>
+    <url>
+        <loc>https://botwatch.xyz/intel</loc>
+    </url>
+    <url>
+        <loc>https://botwatch.xyz/login</loc>
+    </url>
+</urlset>
