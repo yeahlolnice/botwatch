@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import './Landing.css'
 
 const features = [
@@ -24,18 +25,60 @@ const features = [
   },
 ]
 
-const botTypes = [
-  { label: 'OpenAI GPTBot', type: 'LLM Crawler', color: 'var(--green)' },
-  { label: 'Anthropic ClaudeBot', type: 'LLM Crawler', color: 'var(--green)' },
-  { label: 'Googlebot', type: 'Search Crawler', color: 'var(--accent)' },
-  { label: 'Python Requests', type: 'Script', color: 'var(--yellow)' },
-  { label: 'Nikto Scanner', type: 'Security Scanner', color: 'var(--red)' },
-  { label: 'Nuclei', type: 'Security Scanner', color: 'var(--red)' },
-  { label: 'SQLMap', type: 'Security Scanner', color: 'var(--red)' },
-  { label: 'Masscan', type: 'Port Scanner', color: 'var(--orange)' },
-]
+const TRAP_LABELS = {
+  'env-file': '.env probe',
+  'env-local': '.env.local probe',
+  'git-config': '.git/config probe',
+  'git-head': '.git/HEAD probe',
+  'wp-login': 'WordPress login probe',
+  'wp-admin': 'WordPress admin probe',
+  'wp-config': 'WordPress config probe',
+  'phpinfo': 'phpinfo() probe',
+  'actuator-health': 'Spring Boot actuator probe',
+  'actuator-env': 'Spring Boot env dump probe',
+  'admin-panel': 'Admin panel probe',
+  'admin-login-attempt': 'Admin login attempt',
+  'sql-backup': 'SQL backup download',
+  'aws-credentials': 'AWS credential probe',
+  'htpasswd': '.htpasswd probe',
+  'ssh-private-key': 'SSH key probe',
+  'robots-recon': 'robots.txt recon',
+  'server-status': 'Server status probe',
+  'k8s-secrets': 'Kubernetes secrets probe',
+}
+
+function fmt(n) {
+  if (!n) return '0'
+  return Number(n).toLocaleString()
+}
+
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts)) / 1000)
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+function usePublicData(endpoint, interval = 30000) {
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    const load = () =>
+      fetch(endpoint)
+        .then(r => r.ok ? r.json() : null)
+        .then(setData)
+        .catch(() => {})
+    load()
+    const id = setInterval(load, interval)
+    return () => clearInterval(id)
+  }, [endpoint, interval])
+  return data
+}
 
 export default function Landing() {
+  const stats = usePublicData('/api/public/stats')
+  const recent = usePublicData('/api/public/recent')
+
   return (
     <main className="landing">
       <section className="hero-section">
@@ -48,9 +91,60 @@ export default function Landing() {
           and threat actors interact with web infrastructure in the wild — and what they're looking for.
         </p>
         <div className="hero-actions">
-          <Link to="/dashboard" className="btn-primary">Live Data →</Link>
+          <Link to="/intel" className="btn-primary">Live Intel →</Link>
           <a href="#research" className="btn-ghost">About the project</a>
         </div>
+      </section>
+
+      {/* Live stats bar */}
+      <section className="stats-bar">
+        <div className="stat-item">
+          <span className="stat-value">{stats ? fmt(stats.total_requests) : '—'}</span>
+          <span className="stat-label">Total Requests</span>
+        </div>
+        <div className="stat-divider" />
+        <div className="stat-item">
+          <span className="stat-value">{stats ? fmt(stats.unique_ips) : '—'}</span>
+          <span className="stat-label">Unique IPs</span>
+        </div>
+        <div className="stat-divider" />
+        <div className="stat-item">
+          <span className="stat-value">{stats ? fmt(stats.countries_seen) : '—'}</span>
+          <span className="stat-label">Countries</span>
+        </div>
+        <div className="stat-divider" />
+        <div className="stat-item">
+          <span className="stat-value">{stats ? fmt(stats.honeypot_hits) : '—'}</span>
+          <span className="stat-label">Trap Hits</span>
+        </div>
+        <div className="stat-divider" />
+        <div className="stat-item">
+          <span className="stat-value">{stats ? fmt(stats.requests_last_24h) : '—'}</span>
+          <span className="stat-label">Last 24h</span>
+        </div>
+      </section>
+
+      {/* Recent trap hits feed */}
+      <section className="feed-section">
+        <div className="feed-header">
+          <h2 className="section-title">Live trap hits</h2>
+          <span className="feed-pulse"><span className="pulse-dot" />Live</span>
+        </div>
+        <p className="section-sub">Real requests hitting honeypot endpoints right now. IPs are partially masked.</p>
+        <div className="feed">
+          {recent && recent.length > 0 ? recent.slice(0, 12).map((r, i) => (
+            <div key={i} className="feed-row">
+              <span className="feed-time">{timeAgo(r.timestamp)}</span>
+              <span className="feed-trap">{TRAP_LABELS[r.trap_type] || r.trap_type}</span>
+              <span className="feed-ip">{r.masked_ip}</span>
+              <span className="feed-country">{r.country || '—'}</span>
+              {r.bot_label && <span className="feed-bot">{r.bot_label}</span>}
+            </div>
+          )) : (
+            <div className="feed-empty">Waiting for trap hits…</div>
+          )}
+        </div>
+        <Link to="/intel" className="feed-more">View full intel →</Link>
       </section>
 
       <section className="features-section" id="research">
@@ -62,20 +156,6 @@ export default function Landing() {
               <span className="feature-icon">{f.icon}</span>
               <h3>{f.title}</h3>
               <p>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="bots-section">
-        <h2 className="section-title">Who's out there</h2>
-        <p className="section-sub">A sample of what we see hitting servers every day</p>
-        <div className="bot-chips">
-          {botTypes.map(b => (
-            <div key={b.label} className="bot-chip">
-              <span className="bot-dot" style={{ background: b.color }} />
-              <span className="bot-name">{b.label}</span>
-              <span className="bot-type">{b.type}</span>
             </div>
           ))}
         </div>
