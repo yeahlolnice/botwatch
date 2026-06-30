@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
+import Login from './pages/Login'
+import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
 function Nav() {
   const { pathname } = useLocation()
+  if (pathname === '/login') return null
   return (
     <nav className="nav">
       <Link to="/" className="nav-brand">botwatch<span>.xyz</span></Link>
@@ -22,7 +25,15 @@ export default function App() {
       <Nav />
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )

@@ -1,47 +1,67 @@
-import { query } from "../utilities/connectDB.js";
-import { createUsersTableQuery, createRoleQuery, createUserQuery, updateUserQuery, deleteUserQuery, getAllUsersQuery, getUserByIdQuery } from "../utilities/sqlUserQuerys.js";
+import bcrypt from 'bcrypt';
+import { query } from '../utilities/connectDB.js';
+import {
+    getAllUsersQuery,
+    getUserByIdQuery,
+    createUserQuery,
+    updateUserQuery,
+    deleteUserQuery,
+    migrateUsersTableQuery,
+} from '../utilities/sqlUserQuerys.js';
+
+const BCRYPT_ROUNDS = 12;
 
 const getAllUsers = async (req, res) => {
-   try {
+    try {
         const result = await query(getAllUsersQuery);
         return res.status(200).json(result.rows);
-   } catch (error) {
+    } catch (error) {
         console.error('Error fetching users:', error);
         return res.status(500).json({ error: 'Failed to fetch users' });
-   }
+    }
 };
 
 const getUserById = async (req, res) => {
-   try {
-    const userId = parseInt(req.params.id);
-    const result = await query(getUserByIdQuery, [userId]);
-    if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
-    }   
-    return res.status(200).json(result.rows[0]);
-   } catch (error) {
-        console.error('Error fetching user by ID:', error);
-        return res.status(500).json({ error: 'Failed to fetch user' });
-   }
-};
-
-const deleteUser = async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
-        const result = await query(deleteUserQuery, [userId]);
-        return res.status(200).json({ message: `User: #ID ${userId} - deleted successfully` });
+        const result = await query(getUserByIdQuery, [userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        return res.status(200).json(result.rows[0]);
     } catch (error) {
-        console.error('Error deleting user:', error);
-        return res.status(500).json({ error: 'Failed to delete user' });
+        console.error('Error fetching user by ID:', error);
+        return res.status(500).json({ error: 'Failed to fetch user' });
     }
+};
 
+const createUser = async (req, res) => {
+    try {
+        const { name, email, password, role } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+        const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        const result = await query(createUserQuery, [name, email.toLowerCase().trim(), hashed, role || 'user']);
+        return res.status(201).json(result.rows[0]);
+    } catch (error) {
+        if (error.code === '23505') {
+            return res.status(409).json({ error: 'Email already in use' });
+        }
+        console.error('Error creating user:', error);
+        return res.status(500).json({ error: 'Failed to create user' });
+    }
 };
 
 const updateUser = async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
         const { name, email, password, role } = req.body;
-        const result = await query(updateUserQuery, [name, email, password, role, userId]);
+        const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        const result = await query(updateUserQuery, [name, email.toLowerCase().trim(), hashed, role, userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         return res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('Error updating user:', error);
@@ -49,31 +69,15 @@ const updateUser = async (req, res) => {
     }
 };
 
-const createUser = async (req, res) => {
+const deleteUser = async (req, res) => {
     try {
-        // check if user table is created, if not create it
-        
-        const { name, email, password, role } = req.body;
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-        const result = await query(createUserQuery, [name, email, password, role]);
-        return res.status(201).json(result.rows[0]);
+        const userId = parseInt(req.params.id);
+        await query(deleteUserQuery, [userId]);
+        return res.status(200).json({ message: `User #${userId} deleted` });
     } catch (error) {
-        console.error('Error creating user:', error);
-        return res.status(500).json({ error: 'Failed to create user' });
+        console.error('Error deleting user:', error);
+        return res.status(500).json({ error: 'Failed to delete user' });
     }
 };
-
-// const initializeDatabase = async (req, res) => {
-//     try {
-//         await query(createRoleQuery);
-//         await query(createUsersTableQuery);
-//         return res.status(200).json({ message: 'Users database initialized successfully' });
-//     } catch (error) {
-//         console.error('Error initializing database:', error);
-//         return res.status(500).json({ error: 'Failed to initialize database' });
-//     }
-// };
 
 export { getAllUsers, getUserById, createUser, updateUser, deleteUser };
