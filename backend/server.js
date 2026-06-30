@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -9,8 +10,10 @@ import { existsSync } from 'fs';
 import userRoutes from './routes/userRoutes.js';
 import trackingRoutes from './routes/trackingRoutes.js';
 import honeypotRoutes from './routes/honeypotRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
-import { requireApiKey } from './middleware/requireApiKey.js';
+import { requireAuth } from './middleware/requireAuth.js';
+import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
 
@@ -23,10 +26,14 @@ app.set('trust proxy', true);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDist = join(__dirname, '../frontend/dist');
 
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_ORIGIN || false, credentials: true }));
+app.use(cookieParser());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(bodyParser.text({ type: ['text/xml', 'application/xml'], limit: '10mb' }));
+
+// Global rate limiter — applied to all routes
+app.use(globalLimiter);
 
 // Track every request — includes static asset fetches, honeypot hits, API calls
 app.use(trackRequest);
@@ -41,11 +48,14 @@ if (existsSync(frontendDist)) {
     console.warn('Frontend dist not found — run: cd frontend && npm run build');
 }
 
-// All /api/* routes require the internal key
-app.use('/api', requireApiKey);
+// Public auth routes — login/logout/me (login has its own rate limiter)
+app.use('/api/auth', authRoutes);
+
+// All other /api/* routes require a valid JWT cookie
+app.use('/api', requireAuth);
 
 app.use('/api/users', userRoutes);
-app.use('/api/traffic', trackingRoutes);
+app.use('/api/traffic', trafficLimiter, trackingRoutes);
 
 // 404 for unmatched API routes
 app.use('/api', (req, res) => {
@@ -53,7 +63,6 @@ app.use('/api', (req, res) => {
 });
 
 // React router catch-all — serve index.html for all remaining paths
-// Placed after API and honeypot routes so it never swallows them
 if (existsSync(frontendDist)) {
     app.get(/(.*)/, (req, res) => {
         res.sendFile(join(frontendDist, 'index.html'));

@@ -1,18 +1,18 @@
-const API_KEY = import.meta.env.VITE_INTERNAL_API_KEY;
-
-const headers = {
-    'Content-Type': 'application/json',
-    'x-internal-key': API_KEY,
-};
-
 export async function apiFetch(path, options = {}) {
     const res = await fetch(path, {
         ...options,
+        credentials: 'include',
         headers: {
-            ...headers,
+            'Content-Type': 'application/json',
             ...options.headers,
         },
     });
+
+    if (res.status === 401) {
+        // Session expired or not logged in — redirect to login
+        window.location.href = '/login';
+        return;
+    }
 
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
