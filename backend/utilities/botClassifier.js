@@ -21,9 +21,11 @@ const BOT_PATTERNS = [
     { pattern: /DuckDuckBot/i, label: 'DuckDuckGo Bot', type: 'search-crawler' },
     { pattern: /Baiduspider/i, label: 'Baidu Spider', type: 'search-crawler' },
     { pattern: /YandexBot/i, label: 'Yandex Bot', type: 'search-crawler' },
+    { pattern: /YandexWebmaster/i, label: 'Yandex Webmaster', type: 'search-crawler' },
     { pattern: /Sogou/i, label: 'Sogou Spider', type: 'search-crawler' },
     { pattern: /Exabot/i, label: 'Exabot', type: 'search-crawler' },
     { pattern: /facebot/i, label: 'Facebook Bot', type: 'search-crawler' },
+    { pattern: /facebook/i, label: 'Facebook Bot', type: 'search-crawler' },
     { pattern: /ia_archiver/i, label: 'Wayback Machine', type: 'search-crawler' },
 
     // Monitoring / uptime
@@ -45,6 +47,7 @@ const BOT_PATTERNS = [
     { pattern: /httpx/i, label: 'httpx', type: 'script' },
     { pattern: /aiohttp/i, label: 'aiohttp', type: 'script' },
     { pattern: /Scrapy/i, label: 'Scrapy', type: 'script' },
+    { pattern: /PostmanRuntime/i, label: 'Postman', type: 'script' },
 
     // Security / scanning tools
     { pattern: /Nikto/i, label: 'Nikto Scanner', type: 'scanner' },
@@ -56,6 +59,7 @@ const BOT_PATTERNS = [
     { pattern: /nuclei/i, label: 'Nuclei', type: 'scanner' },
     { pattern: /WPScan/i, label: 'WPScan', type: 'scanner' },
     { pattern: /dirbuster/i, label: 'DirBuster', type: 'scanner' },
+    { pattern: /paloaltonetworks.com/i, label: 'Palo Alto Networks', type: 'scanner' },
 ];
 
 export function classifyUserAgent(userAgent) {

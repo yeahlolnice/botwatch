@@ -55,3 +55,13 @@ export const getPublicLeaderboard = async (req, res) => {
         return res.status(500).json({ error: 'Failed to fetch leaderboard' });
     }
 };
+// return the sitemap.xml file for search engines
+export const getPublicSitemap = async (req, res) => {
+    try {
+        res.type('application/xml');
+        res.sendFile('../sitemap.xml', { root: 'public' });
+    } catch (error) {
+        console.error('Public sitemap error:', error);
+        return res.status(500).json({ error: 'Failed to fetch sitemap' });
+    }
+} 

@@ -249,3 +249,4 @@ export const fakeServerStatus = [trap('server-status'), (req, res) => {
 <p>Total Accesses: 48291 - Total Traffic: 1.2 GB</p>
 </body></html>`);
 }];
+
