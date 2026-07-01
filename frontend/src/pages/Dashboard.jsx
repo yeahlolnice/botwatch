@@ -92,11 +92,23 @@ function RequestDetail({ request, onClose }) {
         <div className="detail-overlay" onClick={onClose}>
             <div className="detail-panel" onClick={e => e.stopPropagation()}>
                 <div className="detail-header">
-                    <div>
+                    <div className="detail-header-left">
                         <span className="method-tag" style={{ color: METHOD_COLORS[request.method] || '#fff', fontSize: 16 }}>
                             {request.method}
                         </span>
                         <span className="detail-path">{request.path}</span>
+                        {request.full_url && (
+                            <a
+                                href={request.full_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="detail-open-btn"
+                                title={request.full_url}
+                                onClick={e => e.stopPropagation()}
+                            >
+                                ↗
+                            </a>
+                        )}
                     </div>
                     <button className="detail-close" onClick={onClose}>✕</button>
                 </div>

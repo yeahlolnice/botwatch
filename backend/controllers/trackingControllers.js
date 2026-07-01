@@ -30,7 +30,9 @@ const trackRequest = (req, res, next) => {
         try {
             const responseTime = Date.now() - startTime;
 
-            const { method, path, query: queryParams, headers, body } = req;
+            const { method, query: queryParams, headers, body } = req;
+            // req.path strips the mount prefix (e.g. /api/traffic → /); originalUrl preserves it
+            const path = req.originalUrl.split('?')[0];
             const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
 
             // IP resolution — CF-Connecting-IP is the verified real client IP
