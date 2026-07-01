@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS ip_enrichment (
     abuse_is_tor            BOOLEAN,
     abuse_is_public         BOOLEAN,
     abuse_checked_at        TIMESTAMPTZ,
+    abuse_reports           JSONB,
 
     -- Reverse DNS (free, local)
     rdns                    TEXT,
@@ -30,8 +31,8 @@ INSERT INTO ip_enrichment (
     ip,
     abuse_confidence_score, abuse_total_reports, abuse_last_reported_at,
     abuse_country_code, abuse_isp, abuse_domain, abuse_usage_type,
-    abuse_is_tor, abuse_is_public, abuse_checked_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+    abuse_is_tor, abuse_is_public, abuse_checked_at, abuse_reports
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11)
 ON CONFLICT (ip) DO UPDATE SET
     abuse_confidence_score  = EXCLUDED.abuse_confidence_score,
     abuse_total_reports     = EXCLUDED.abuse_total_reports,
@@ -43,6 +44,7 @@ ON CONFLICT (ip) DO UPDATE SET
     abuse_is_tor            = EXCLUDED.abuse_is_tor,
     abuse_is_public         = EXCLUDED.abuse_is_public,
     abuse_checked_at        = NOW(),
+    abuse_reports           = EXCLUDED.abuse_reports,
     updated_at              = NOW()
 RETURNING *;
 `;
