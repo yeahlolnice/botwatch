@@ -15,6 +15,7 @@ import publicRoutes from './routes/publicRoutes.js';
 import enrichmentRoutes from './routes/enrichmentRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
+import { requireAdmin } from './middleware/requireAdmin.js';
 import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
@@ -59,9 +60,9 @@ app.use('/api/public', publicRoutes);
 // All other /api/* routes require a valid JWT cookie
 app.use('/api', requireAuth);
 
-app.use('/api/users', userRoutes);
+app.use('/api/users', requireAdmin, userRoutes);
 app.use('/api/traffic', trafficLimiter, trackingRoutes);
-app.use('/api/enrich', enrichmentRoutes);
+app.use('/api/enrich', requireAdmin, enrichmentRoutes);
 
 // 404 for unmatched API routes
 app.use('/api', (req, res) => {

@@ -118,20 +118,38 @@ function AbuseIpPanel({ ip }) {
             {loading && <div className="abuse-loading">Checking…</div>}
             {error && <div className="abuse-error">{error}</div>}
             {data && !loading && (
-                <div className="abuse-grid">
-                    <div className="abuse-score-wrap">
-                        <span className="abuse-score" style={{ color: scoreColor }}>{score ?? '—'}</span>
-                        <span className="abuse-score-label">Confidence Score</span>
+                <div className="abuse-content">
+                    <div className="abuse-grid">
+                        <div className="abuse-score-wrap">
+                            <span className="abuse-score" style={{ color: scoreColor }}>{score ?? '—'}</span>
+                            <span className="abuse-score-label">Confidence Score</span>
+                        </div>
+                        <dl className="abuse-dl">
+                            <dt>Total Reports</dt><dd>{data.abuse_total_reports ?? '—'}</dd>
+                            <dt>ISP</dt><dd>{data.abuse_isp || '—'}</dd>
+                            <dt>Domain</dt><dd>{data.abuse_domain || '—'}</dd>
+                            <dt>Usage Type</dt><dd>{data.abuse_usage_type || '—'}</dd>
+                            <dt>Country</dt><dd>{data.abuse_country_code || '—'}</dd>
+                            <dt>TOR Exit Node</dt><dd>{data.abuse_is_tor ? '⚠ Yes' : 'No'}</dd>
+                            <dt>Last Reported</dt><dd>{new Date(data.abuse_last_reported_at).toLocaleDateString()}</dd>
+                        </dl>
                     </div>
-                    <dl className="abuse-dl">
-                        <dt>Total Reports</dt><dd>{data.abuse_total_reports ?? '—'}</dd>
-                        <dt>ISP</dt><dd>{data.abuse_isp || '—'}</dd>
-                        <dt>Domain</dt><dd>{data.abuse_domain || '—'}</dd>
-                        <dt>Usage Type</dt><dd>{data.abuse_usage_type || '—'}</dd>
-                        <dt>Country</dt><dd>{data.abuse_country_code || '—'}</dd>
-                        <dt>TOR Exit Node</dt><dd>{data.abuse_is_tor ? '⚠ Yes' : 'No'}</dd>
-                        <dt>Last Reported</dt><dd>{new Date(data.abuse_last_reported_at).toLocaleDateString()}</dd>
-                    </dl>
+                    {/* abuse comments */}
+                    <div className="abuse-comments">
+                        <h4 className="abuse-title margin-top-small">Recent Reports</h4>
+                        {data.abuse_reports && data.abuse_reports.length > 0 ? (
+                            <div className="abuse-report-grid">
+                                {data.abuse_reports.slice(0, 5).map((r, i) => (
+                                    <div key={i} className="abuse-report-item">
+                                        <div className="abuse-report-date">{formatDate(r.reported_at)}</div>
+                                        <div className="abuse-report-comment">{r.comment || 'No comment'}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p>No recent reports</p>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -251,6 +269,31 @@ export default function Dashboard() {
     const [selected, setSelected] = useState(null)
     const [activeTab, setActiveTab] = useState('traffic')
     const debounceRef = useRef(null)
+    const [isAdmin, setIsAdmin] = useState(false)
+    const [accessLink, setAccessLink] = useState(null)
+    const [generatingLink, setGeneratingLink] = useState(false)
+
+    useEffect(() => {
+        fetch('/api/auth/me', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => setIsAdmin(j?.user?.role === 'admin'))
+            .catch(() => {})
+    }, [])
+
+    const generateAccessLink = async () => {
+        setGeneratingLink(true)
+        setAccessLink(null)
+        try {
+            const res = await fetch('/api/auth/access-link', { method: 'POST', credentials: 'include' })
+            const j = await res.json()
+            if (!res.ok) throw new Error(j.error || 'Failed')
+            setAccessLink(j)
+        } catch (e) {
+            alert(`Could not generate link: ${e.message}`)
+        } finally {
+            setGeneratingLink(false)
+        }
+    }
 
     // Debounce search input — only hit the API 400ms after typing stops
     const handleSearchChange = (e) => {
@@ -328,9 +371,39 @@ export default function Dashboard() {
                     <h1 className="dash-title">Threat Intelligence Dashboard</h1>
                     <p className="dash-sub">Live request feed · bot classification · attack pattern detection</p>
                 </div>
-                <button className="refresh-btn" onClick={fetchAll} disabled={loading}>
-                    {loading ? 'Loading…' : '↻ Refresh'}
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        {isAdmin && (
+                            <button className="refresh-btn" onClick={generateAccessLink} disabled={generatingLink}>
+                                {generatingLink ? 'Generating…' : '🔗 Share Access'}
+                            </button>
+                        )}
+                        <button className="refresh-btn" onClick={fetchAll} disabled={loading}>
+                            {loading ? 'Loading…' : '↻ Refresh'}
+                        </button>
+                    </div>
+                    {accessLink && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px' }}>
+                            <input
+                                readOnly
+                                value={accessLink.url}
+                                onClick={e => e.target.select()}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 12, fontFamily: 'monospace', width: 340, outline: 'none', cursor: 'text' }}
+                            />
+                            <button
+                                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                                onClick={() => { navigator.clipboard.writeText(accessLink.url) }}
+                            >Copy</button>
+                            <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                                expires {new Date(accessLink.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <button
+                                style={{ fontSize: 11, background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
+                                onClick={() => setAccessLink(null)}
+                            >✕</button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {error && (
