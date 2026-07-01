@@ -129,8 +129,8 @@ function AbuseIpPanel({ ip }) {
                         <dt>Domain</dt><dd>{data.abuse_domain || '—'}</dd>
                         <dt>Usage Type</dt><dd>{data.abuse_usage_type || '—'}</dd>
                         <dt>Country</dt><dd>{data.abuse_country_code || '—'}</dd>
-                        {data.abuse_is_tor && <dt>TOR Exit Node</dt>}<dd>{data.abuse_is_tor ? '⚠ Yes' : null}</dd>
-                        {data.abuse_last_reported_at && <><dt>Last Reported</dt><dd>{new Date(data.abuse_last_reported_at).toLocaleDateString()}</dd></>}
+                        <dt>TOR Exit Node</dt><dd>{data.abuse_is_tor ? '⚠ Yes' : 'No'}</dd>
+                        <dt>Last Reported</dt><dd>{new Date(data.abuse_last_reported_at).toLocaleDateString()}</dd>
                     </dl>
                 </div>
             )}

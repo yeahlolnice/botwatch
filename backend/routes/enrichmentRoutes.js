@@ -3,6 +3,7 @@ import {
     checkIp,
     reportIp,
     getCandidates,
+    getIpSummary,
     initEnrichmentTable,
 } from '../controllers/enrichmentController.js';
 import rateLimit from 'express-rate-limit';
@@ -19,6 +20,7 @@ const enrichLimiter = rateLimit({
 });
 
 router.get('/candidates', getCandidates);
+router.get('/summary/:ip', getIpSummary);
 router.get('/check/:ip', enrichLimiter, checkIp);
 router.post('/report', reportIp);
 router.post('/init', initEnrichmentTable);

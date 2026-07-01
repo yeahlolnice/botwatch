@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { query } from "../utilities/connectDB.js";
 import { classifyUserAgent } from "../utilities/botClassifier.js";
 import { analyzeRequest } from "../utilities/payloadAnalyzer.js";
@@ -20,6 +21,17 @@ import {
 // after the response is sent. Non-blocking: errors here never affect the response.
 const trackRequest = (req, res, next) => {
     const startTime = Date.now();
+
+    // Skip tracking authenticated sessions — no point recording your own browsing
+    const token = req.cookies?.auth_token;
+    if (token) {
+        try {
+            jwt.verify(token, process.env.JWT_SECRET);
+            return next();
+        } catch {
+            // Invalid/expired token — treat as unauthenticated and track normally
+        }
+    }
 
     // Run payload analysis synchronously before next() so req.threatAnalysis
     // is available to honeypot handlers if they want to read it

@@ -82,11 +82,128 @@ function ReportForm({ ip, onDone }) {
     )
 }
 
+function IpSummaryPanel({ ip }) {
+    const [data, setData] = useState(null)
+    const [loading, setLoading] = useState(false)
+    const [loaded, setLoaded] = useState(false)
+
+    const load = async () => {
+        if (loaded) return
+        setLoading(true)
+        try {
+            const result = await apiFetch(`/api/enrich/summary/${encodeURIComponent(ip)}`)
+            setData(result)
+            setLoaded(true)
+        } catch {
+            // non-fatal
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => { load() }, [ip])
+
+    if (loading) return <div className="summary-loading">Building report…</div>
+    if (!data) return null
+
+    const { summary, honeypots, signals, paths } = data
+    const fmt = (ts) => ts ? new Date(ts).toLocaleString() : '—'
+
+    return (
+        <div className="summary-panel">
+            <h4 className="summary-title">Activity Summary — {ip}</h4>
+
+            <div className="summary-overview">
+                <div className="summary-stat"><span>{Number(summary.total_requests).toLocaleString()}</span>Total Requests</div>
+                <div className="summary-stat"><span>{summary.honeypot_hits}</span>Trap Hits</div>
+                <div className="summary-stat"><span>{summary.threat_requests}</span>Attack Signals</div>
+                <div className="summary-stat"><span>{summary.max_score}</span>Max Score</div>
+                <div className="summary-stat"><span>{fmt(summary.first_seen)}</span>First Seen</div>
+                <div className="summary-stat"><span>{fmt(summary.last_seen)}</span>Last Seen</div>
+            </div>
+
+            {summary.user_agents?.length > 0 && (
+                <div className="summary-section">
+                    <h5>User Agents</h5>
+                    {summary.user_agents.map((ua, i) => (
+                        <div key={i} className="summary-ua">{ua}</div>
+                    ))}
+                </div>
+            )}
+
+            {honeypots?.length > 0 && (
+                <div className="summary-section">
+                    <h5>Honeypot Hits</h5>
+                    <table className="summary-table">
+                        <thead><tr><th>Trap</th><th>Hits</th><th>First</th><th>Last</th></tr></thead>
+                        <tbody>
+                            {honeypots.map(h => (
+                                <tr key={h.trap_type}>
+                                    <td>{h.trap_type}</td>
+                                    <td>{h.hits}</td>
+                                    <td>{fmt(h.first_hit)}</td>
+                                    <td>{fmt(h.last_hit)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {honeypots.filter(h => h.sample_body).map(h => (
+                        <div key={h.trap_type} className="summary-body">
+                            <span className="summary-body-label">POST body captured on {h.trap_type}:</span>
+                            <pre>{JSON.stringify(h.sample_body, null, 2)}</pre>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {signals?.length > 0 && (
+                <div className="summary-section">
+                    <h5>Attack Signals Detected</h5>
+                    <table className="summary-table">
+                        <thead><tr><th>Category</th><th>Signal</th><th>Source</th><th>Score</th><th>Excerpt</th></tr></thead>
+                        <tbody>
+                            {signals.map((s, i) => (
+                                <tr key={i}>
+                                    <td><span className="sig-cat">{s.category}</span></td>
+                                    <td>{s.signal_id}</td>
+                                    <td>{s.source}</td>
+                                    <td>{s.score}</td>
+                                    <td><code className="sig-excerpt">{s.excerpt}</code></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {paths?.length > 0 && (
+                <div className="summary-section">
+                    <h5>Paths Accessed</h5>
+                    <table className="summary-table">
+                        <thead><tr><th>Method</th><th>Path</th><th>Hits</th><th>Trap</th></tr></thead>
+                        <tbody>
+                            {paths.map((p, i) => (
+                                <tr key={i} className={p.is_trap ? 'trap-row' : ''}>
+                                    <td>{p.method}</td>
+                                    <td><code>{p.path}</code></td>
+                                    <td>{p.hits}</td>
+                                    <td>{p.is_trap ? '🪤' : ''}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function Report() {
     const [candidates, setCandidates] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [expanded, setExpanded] = useState(null)
+    const [summaryIp, setSummaryIp] = useState(null)
     const [reported, setReported] = useState(new Set())
     const [enriching, setEnriching] = useState(null)
 
@@ -100,7 +217,6 @@ export default function Report() {
         setEnriching(ip)
         try {
             await apiFetch(`/api/enrich/check/${encodeURIComponent(ip)}`)
-            // Refresh candidates to show updated enrichment data
             const data = await apiFetch('/api/enrich/candidates')
             setCandidates(data)
         } catch {
@@ -113,6 +229,7 @@ export default function Report() {
     const handleReported = (ip) => {
         setReported(prev => new Set([...prev, ip]))
         setExpanded(null)
+        setSummaryIp(null)
     }
 
     return (
@@ -132,11 +249,10 @@ export default function Report() {
                         src="https://www.abuseipdb.com/contributor/324210.svg"
                         alt="AbuseIPDB Contributor Badge"
                         className="abuseipdb-badge"
-                        style={{ width: 200, background: '#35c246', linearGradient:'(rgba(255,255,255,0), rgba(255,255,255,.3) 50%, rgba(0,0,0,.2) 51%, rgba(0,0,0,0))', padding: '5px' }}
+                        style={{ width: 200, background: '#35c246', padding: '5px' }}
                     />
                 </a>
             </div>
-
 
             {loading && <div className="report-loading">Loading candidates…</div>}
             {error && <div className="report-err">Failed to load: {error}</div>}
@@ -149,6 +265,7 @@ export default function Report() {
                 {candidates.map(c => {
                     const ip = c.ip
                     const isExpanded = expanded === ip
+                    const isSummaryOpen = summaryIp === ip
                     const isReported = reported.has(ip)
                     const hasEnrichment = c.abuse_checked_at !== null
 
@@ -187,6 +304,12 @@ export default function Report() {
 
                                 <div className="candidate-actions">
                                     <button
+                                        className={`summary-btn ${isSummaryOpen ? 'active' : ''}`}
+                                        onClick={() => setSummaryIp(isSummaryOpen ? null : ip)}
+                                    >
+                                        {isSummaryOpen ? 'Hide' : 'Build Report'}
+                                    </button>
+                                    <button
                                         className={`expand-btn ${isExpanded ? 'active' : ''}`}
                                         onClick={() => setExpanded(isExpanded ? null : ip)}
                                         disabled={isReported}
@@ -203,6 +326,8 @@ export default function Report() {
                                     ))}
                                 </div>
                             )}
+
+                            {isSummaryOpen && <IpSummaryPanel ip={ip} />}
 
                             {isExpanded && (
                                 <ReportForm ip={ip} onDone={handleReported} />

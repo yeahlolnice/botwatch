@@ -51,6 +51,73 @@ export const getEnrichmentByIpQuery = `
 SELECT * FROM ip_enrichment WHERE ip = $1::inet;
 `;
 
+// Full activity summary for a single IP — used to build a report
+export const getIpSummaryQuery = `
+SELECT
+    MIN(timestamp)                                                  AS first_seen,
+    MAX(timestamp)                                                  AS last_seen,
+    COUNT(*)                                                        AS total_requests,
+    COUNT(*) FILTER (WHERE is_trap = TRUE)                          AS honeypot_hits,
+    COUNT(*) FILTER (WHERE threat_signals IS NOT NULL
+                     AND jsonb_array_length(threat_signals) > 0)    AS threat_requests,
+    MAX(bot_score)                                                  AS max_score,
+    array_agg(DISTINCT method)                                      AS methods_used,
+    array_agg(DISTINCT country) FILTER (WHERE country IS NOT NULL)  AS countries,
+    array_agg(DISTINCT user_agent) FILTER (WHERE user_agent IS NOT NULL) AS user_agents
+FROM request_tracking
+WHERE cf_connecting_ip = $1::inet
+   OR ip_address = $1::inet;
+`;
+
+export const getIpHoneypotHitsQuery = `
+SELECT
+    trap_type,
+    COUNT(*)        AS hits,
+    MIN(timestamp)  AS first_hit,
+    MAX(timestamp)  AS last_hit,
+    -- Sample a POST body if one was captured
+    (SELECT body FROM request_tracking r2
+     WHERE (r2.cf_connecting_ip = $1::inet OR r2.ip_address = $1::inet)
+       AND r2.trap_type = rt.trap_type
+       AND r2.body IS NOT NULL
+     ORDER BY timestamp DESC LIMIT 1) AS sample_body
+FROM request_tracking rt
+WHERE (cf_connecting_ip = $1::inet OR ip_address = $1::inet)
+  AND is_trap = TRUE
+GROUP BY trap_type
+ORDER BY hits DESC;
+`;
+
+export const getIpThreatSignalsQuery = `
+SELECT DISTINCT
+    sig->>'category'    AS category,
+    sig->>'id'          AS signal_id,
+    sig->>'source'      AS source,
+    sig->>'excerpt'     AS excerpt,
+    (sig->>'score')::int AS score
+FROM request_tracking,
+     jsonb_array_elements(threat_signals) AS sig
+WHERE (cf_connecting_ip = $1::inet OR ip_address = $1::inet)
+  AND threat_signals IS NOT NULL
+  AND jsonb_array_length(threat_signals) > 0
+ORDER BY score DESC
+LIMIT 30;
+`;
+
+export const getIpPathsQuery = `
+SELECT
+    path,
+    method,
+    COUNT(*)        AS hits,
+    MAX(timestamp)  AS last_seen,
+    bool_or(is_trap) AS is_trap
+FROM request_tracking
+WHERE (cf_connecting_ip = $1::inet OR ip_address = $1::inet)
+GROUP BY path, method
+ORDER BY hits DESC
+LIMIT 40;
+`;
+
 // IPs worth reviewing: hit a trap or scored high, not yet reported today
 export const getReportCandidatesQuery = `
 SELECT
