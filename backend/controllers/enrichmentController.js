@@ -4,6 +4,10 @@ import {
     upsertAbuseIpDbQuery,
     getEnrichmentByIpQuery,
     getReportCandidatesQuery,
+    getIpSummaryQuery,
+    getIpHoneypotHitsQuery,
+    getIpThreatSignalsQuery,
+    getIpPathsQuery,
 } from '../utilities/sqlEnrichmentQuerys.js';
 
 const ABUSEIPDB_BASE = 'https://api.abuseipdb.com/api/v2';
@@ -127,6 +131,31 @@ export const getCandidates = async (req, res) => {
     } catch (error) {
         console.error('Candidates error:', error);
         return res.status(500).json({ error: 'Failed to fetch candidates' });
+    }
+};
+
+// GET /api/enrich/summary/:ip — full activity breakdown for report building
+export const getIpSummary = async (req, res) => {
+    const ip = req.params.ip;
+    if (!ip || !/^[\d.a-fA-F:]+$/.test(ip)) {
+        return res.status(400).json({ error: 'Invalid IP address' });
+    }
+    try {
+        const [summary, honeypots, signals, paths] = await Promise.all([
+            query(getIpSummaryQuery, [ip]),
+            query(getIpHoneypotHitsQuery, [ip]),
+            query(getIpThreatSignalsQuery, [ip]),
+            query(getIpPathsQuery, [ip]),
+        ]);
+        return res.json({
+            summary: summary.rows[0],
+            honeypots: honeypots.rows,
+            signals: signals.rows,
+            paths: paths.rows,
+        });
+    } catch (error) {
+        console.error('IP summary error:', error);
+        return res.status(500).json({ error: 'Failed to build IP summary' });
     }
 };
 
