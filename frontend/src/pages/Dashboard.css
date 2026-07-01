@@ -4,6 +4,8 @@
     margin: 0 auto;
 }
 
+.margin-top-small { margin-top: 12px; }
+
 .dash-header {
     display: flex;
     align-items: flex-start;

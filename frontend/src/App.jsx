@@ -5,18 +5,22 @@ import Dashboard from './pages/Dashboard'
 import Intel from './pages/Intel'
 import Report from './pages/Report'
 import Login from './pages/Login'
+import Access from './pages/Access'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
 function Nav() {
   const { pathname } = useLocation()
-  const [authed, setAuthed] = useState(false)
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
-      .then(r => setAuthed(r.ok))
-      .catch(() => setAuthed(false))
+      .then(r => r.ok ? r.json() : null)
+      .then(j => setUser(j?.user || null))
+      .catch(() => setUser(null))
   }, [pathname])
+
+  const authed = !!user
 
   if (pathname === '/login') return null
   return (
@@ -28,7 +32,7 @@ function Nav() {
         {authed && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
         {authed && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {authed
-          ? <button className="nav-signout" onClick={() => fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => setAuthed(false))}>Sign out</button>
+          ? <button className="nav-signout" onClick={() => fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => setUser(null))}>Sign out</button>
           : <Link to="/login" className={pathname === '/login' ? 'active' : ''}>Sign in</Link>
         }
       </div>
@@ -52,6 +56,7 @@ export default function App() {
           }
         />
         <Route path="/login" element={<Login />} />
+        <Route path="/access/:token" element={<Access />} />
         <Route
           path="/dashboard"
           element={

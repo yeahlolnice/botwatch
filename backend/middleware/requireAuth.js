@@ -9,10 +9,14 @@ export const requireAuth = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = { id: decoded.id, email: decoded.email, role: decoded.role };
+        req.user = {
+            id: decoded.id || null,
+            email: decoded.email || null,
+            role: decoded.role,
+            isGuest: decoded.role === 'guest',
+        };
         next();
     } catch (error) {
-        // Token expired or tampered
         res.clearCookie('auth_token');
         return res.status(401).json({ error: 'Session expired, please log in again' });
     }

@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { query } from '../utilities/connectDB.js';
 
 const COOKIE_OPTIONS = {
@@ -65,6 +66,83 @@ export const logout = (req, res) => {
 
 // GET /api/auth/me
 export const me = (req, res) => {
-    // req.user is set by requireAuth middleware
     return res.status(200).json({ user: req.user });
+};
+
+// POST /api/auth/access-link — admin only, generates a 2-hour guest access token
+export const createAccessLink = async (req, res) => {
+    try {
+        await query(`
+            CREATE TABLE IF NOT EXISTS access_links (
+                token       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                created_by  INT NOT NULL,
+                created_at  TIMESTAMPTZ DEFAULT NOW(),
+                expires_at  TIMESTAMPTZ NOT NULL,
+                used_at     TIMESTAMPTZ,
+                used_count  INT DEFAULT 0
+            )
+        `);
+
+        const token = randomUUID();
+        const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+
+        await query(
+            `INSERT INTO access_links (token, created_by, expires_at)
+             VALUES ($1, $2, $3)`,
+            [token, req.user.id, expiresAt]
+        );
+
+        const baseUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
+        return res.status(201).json({
+            url: `${baseUrl}/access/${token}`,
+            expires_at: expiresAt,
+        });
+    } catch (error) {
+        console.error('Access link error:', error);
+        return res.status(500).json({ error: 'Failed to create access link' });
+    }
+};
+
+// GET /api/auth/access/:token — validates token, issues a guest JWT cookie
+export const redeemAccessLink = async (req, res) => {
+    try {
+        const { token } = req.params;
+
+        const result = await query(
+            `SELECT * FROM access_links WHERE token = $1`,
+            [token]
+        );
+
+        const link = result.rows[0];
+
+        if (!link) return res.status(404).json({ error: 'Invalid access link' });
+        if (new Date(link.expires_at) < new Date()) {
+            return res.status(410).json({ error: 'This link has expired' });
+        }
+
+        // Record use but don't block reuse within the window
+        await query(
+            `UPDATE access_links SET used_at = NOW(), used_count = used_count + 1 WHERE token = $1`,
+            [token]
+        );
+
+        const guestToken = jwt.sign(
+            { role: 'guest', via: token },
+            process.env.JWT_SECRET,
+            { expiresIn: '2h' }
+        );
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== 'development',
+            sameSite: 'strict',
+            maxAge: 2 * 60 * 60 * 1000,
+        };
+
+        res.cookie('auth_token', guestToken, cookieOptions);
+        return res.redirect('/dashboard');
+    } catch (error) {
+        console.error('Redeem access link error:', error);
+        return res.status(500).json({ error: 'Failed to redeem access link' });
+    }
 };
