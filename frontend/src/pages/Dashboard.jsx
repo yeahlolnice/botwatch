@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiFetch } from '../api.js'
 import './Dashboard.css'
 
@@ -97,7 +97,8 @@ function RequestDetail({ request, onClose }) {
                             {request.method}
                         </span>
                         <span className="detail-path">{request.path}</span>
-                        {request.full_url && (
+                    </div>
+                    {request.full_url && (
                             <a
                                 href={request.full_url}
                                 target="_blank"
@@ -109,7 +110,6 @@ function RequestDetail({ request, onClose }) {
                                 ↗
                             </a>
                         )}
-                    </div>
                     <button className="detail-close" onClick={onClose}>✕</button>
                 </div>
 
@@ -123,6 +123,7 @@ function RequestDetail({ request, onClose }) {
                             <dt>X-Forwarded-For</dt><dd className="mono">{request.x_forwarded_for || '—'}</dd>
                             <dt>Status</dt><dd style={{ color: statusColor(request.status_code) }}>{request.status_code || '—'}</dd>
                             <dt>Response Time</dt><dd>{request.response_time_ms != null ? `${request.response_time_ms}ms` : '—'}</dd>
+                            <dt>Country</dt><dd>{request.country || '—'}</dd>
                             <dt>Referrer</dt><dd>{request.referrer || '—'}</dd>
                         </dl>
                     </div>
@@ -185,47 +186,82 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [search, setSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
     const [methodFilter, setMethodFilter] = useState('ALL')
     const [threatFilter, setThreatFilter] = useState(false)
     const [trapFilter, setTrapFilter] = useState(false)
+    const [minScore, setMinScore] = useState('')
+    const [countryFilter, setCountryFilter] = useState('')
     const [page, setPage] = useState(1)
     const [selected, setSelected] = useState(null)
     const [activeTab, setActiveTab] = useState('traffic')
+    const debounceRef = useRef(null)
 
-    const fetchAll = useCallback(async () => {
+    // Debounce search input — only hit the API 400ms after typing stops
+    const handleSearchChange = (e) => {
+        const val = e.target.value
+        setSearch(val)
+        clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            setDebouncedSearch(val)
+            setPage(1)
+        }, 400)
+    }
+
+    const resetFilters = () => {
+        setSearch('')
+        setDebouncedSearch('')
+        setMethodFilter('ALL')
+        setThreatFilter(false)
+        setTrapFilter(false)
+        setMinScore('')
+        setCountryFilter('')
+        setPage(1)
+    }
+
+    const hasFilters = debouncedSearch || methodFilter !== 'ALL' || threatFilter || trapFilter || minScore || countryFilter
+
+    const fetchTraffic = useCallback(async () => {
         setLoading(true)
         setError(null)
         try {
-            const [trafficData, statsData] = await Promise.all([
-                apiFetch(`/api/traffic?limit=50&page=${page}`),
-                apiFetch('/api/traffic/stats'),
-            ])
+            const params = new URLSearchParams({ limit: 50, page })
+            if (debouncedSearch) params.set('search', debouncedSearch)
+            if (methodFilter !== 'ALL') params.set('method', methodFilter)
+            if (threatFilter) params.set('threat', 'true')
+            if (trapFilter) params.set('trap', 'true')
+            if (minScore) params.set('minScore', minScore)
+            if (countryFilter) params.set('country', countryFilter)
+
+            const trafficData = await apiFetch(`/api/traffic?${params}`)
             setTraffic(trafficData.data)
             setPagination(trafficData.pagination)
-            setStats(statsData)
         } catch (e) {
             setError(e.message)
         } finally {
             setLoading(false)
         }
-    }, [page])
+    }, [page, debouncedSearch, methodFilter, threatFilter, trapFilter, minScore, countryFilter])
 
-    useEffect(() => { fetchAll() }, [fetchAll])
+    const fetchStats = useCallback(async () => {
+        try {
+            const statsData = await apiFetch('/api/traffic/stats')
+            setStats(statsData)
+        } catch (e) {
+            // stats failure is non-fatal
+        }
+    }, [])
 
-    const filtered = traffic.filter(r => {
-        if (methodFilter !== 'ALL' && r.method !== methodFilter) return false
-        if (threatFilter && (!r.threat_signals || r.threat_signals.length === 0)) return false
-        if (trapFilter && !r.is_trap) return false
-        const q = search.toLowerCase()
-        if (q && !(
-            r.path?.toLowerCase().includes(q) ||
-            r.user_agent?.toLowerCase().includes(q) ||
-            r.ip_address?.toLowerCase().includes(q) ||
-            r.bot_label?.toLowerCase().includes(q) ||
-            r.trap_type?.toLowerCase().includes(q)
-        )) return false
-        return true
-    })
+    const fetchAll = useCallback(() => {
+        fetchTraffic()
+        fetchStats()
+    }, [fetchTraffic, fetchStats])
+
+    useEffect(() => { fetchTraffic() }, [fetchTraffic])
+    useEffect(() => { fetchStats() }, [fetchStats])
+
+    // Reset to page 1 when filters change
+    const setFilter = (setter) => (val) => { setter(val); setPage(1) }
 
     const summary = stats?.summary || {}
     const avgMs = summary.avg_response_time_ms ? Math.round(parseFloat(summary.avg_response_time_ms)) : null
@@ -278,20 +314,43 @@ export default function Dashboard() {
                     <div className="filter-bar">
                         <input
                             className="search-input"
-                            placeholder="Search path, IP, User-Agent, bot label, trap type…"
+                            placeholder="Search path, IP, country, User-Agent, bot label…"
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
+                            onChange={handleSearchChange}
                         />
+                        <input
+                            className="country-input"
+                            placeholder="Country…"
+                            value={countryFilter}
+                            onChange={e => { setCountryFilter(e.target.value); setPage(1) }}
+                        />
+                        <input
+                            className="score-input"
+                            placeholder="Min score"
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={minScore}
+                            onChange={e => { setMinScore(e.target.value); setPage(1) }}
+                        />
+                    </div>
+                    <div className="filter-bar filter-bar-row2">
                         <div className="method-filters">
                             {['ALL', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map(m => (
                                 <button key={m} className={`method-btn ${methodFilter === m ? 'active' : ''}`}
-                                    onClick={() => setMethodFilter(m)}>{m}</button>
+                                    onClick={() => setFilter(setMethodFilter)(m)}>{m}</button>
                             ))}
                         </div>
                         <button className={`filter-toggle ${threatFilter ? 'active' : ''}`}
-                            onClick={() => setThreatFilter(v => !v)}>⚠ Threats only</button>
+                            onClick={() => setFilter(setThreatFilter)(!threatFilter)}>⚠ Threats only</button>
                         <button className={`filter-toggle ${trapFilter ? 'active' : ''}`}
-                            onClick={() => setTrapFilter(v => !v)}>🪤 Traps only</button>
+                            onClick={() => setFilter(setTrapFilter)(!trapFilter)}>🪤 Traps only</button>
+                        {hasFilters && (
+                            <button className="filter-clear" onClick={resetFilters}>✕ Clear filters</button>
+                        )}
+                        <span className="filter-count">
+                            {loading ? 'Loading…' : `${pagination.total.toLocaleString()} results`}
+                        </span>
                     </div>
 
                     <div className="table-wrap">
@@ -304,15 +363,16 @@ export default function Dashboard() {
                                     <th>Status</th>
                                     <th>Ms</th>
                                     <th>IP</th>
+                                    <th>Country</th>
                                     <th>Score</th>
                                     <th>Classification</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.length === 0 && !loading && (
-                                    <tr><td colSpan={8} className="empty-row">No requests match.</td></tr>
+                                {traffic.length === 0 && !loading && (
+                                    <tr><td colSpan={9} className="empty-row">No requests match.</td></tr>
                                 )}
-                                {filtered.map(r => (
+                                {traffic.map(r => (
                                     <tr key={r.id} onClick={() => setSelected(r)} className={`clickable ${r.is_trap ? 'row-trap' : ''} ${r.bot_score >= 70 ? 'row-threat' : ''}`}>
                                         <td className="td-time">
                                             <span className="time-date">{formatDate(r.timestamp)}</span>
@@ -337,6 +397,12 @@ export default function Dashboard() {
                                             {r.cf_connecting_ip || r.ip_address || '—'}
                                             {r.cf_connecting_ip && <span className="cf-pip" title="Real IP via CF-Connecting-IP">CF</span>}
                                         </td>
+                                        <td className="td-country">
+                                            {r.country
+                                                ? <button className="country-link" onClick={e => { e.stopPropagation(); setFilter(setCountryFilter)(r.country); setActiveTab('traffic') }}>{r.country}</button>
+                                                : <span className="td-dim">—</span>
+                                            }
+                                        </td>
                                         <td>
                                             {r.bot_score > 0
                                                 ? <span className="score-badge" style={{ color: scoreColor(r.bot_score), borderColor: scoreColor(r.bot_score) }}>{r.bot_score}</span>
@@ -357,13 +423,11 @@ export default function Dashboard() {
                         </table>
                     </div>
 
-                    {pagination.pages > 1 && (
-                        <div className="pagination">
-                            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
-                            <span>Page {page} of {pagination.pages} ({pagination.total.toLocaleString()} total)</span>
-                            <button disabled={page === pagination.pages} onClick={() => setPage(p => p + 1)}>Next →</button>
-                        </div>
-                    )}
+                    <div className="pagination">
+                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
+                        <span>Page {page} of {Math.max(pagination.pages, 1)} ({pagination.total.toLocaleString()} total)</span>
+                        <button disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)}>Next →</button>
+                    </div>
                 </>
             )}
 
