@@ -86,8 +86,61 @@ function BotBadge({ label, type }) {
     )
 }
 
+function AbuseIpPanel({ ip }) {
+    const [data, setData] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    useEffect(() => {
+        if (!ip) return
+        setLoading(true)
+        setData(null)
+        setError(null)
+        fetch(`/api/enrich/check/${encodeURIComponent(ip)}`, { credentials: 'include' })
+            .then(r => r.json())
+            .then(j => { setData(j.data); setLoading(false) })
+            .catch(() => { setError('Could not load enrichment data'); setLoading(false) })
+    }, [ip])
+
+    if (!ip) return null
+
+    const score = data?.abuse_confidence_score ?? null
+    const scoreColor = score === null ? '#888' : score >= 75 ? '#ef4444' : score >= 25 ? '#f97316' : '#22c55e'
+
+    return (
+        <div className="abuse-panel">
+            <div className="abuse-header">
+                <span className="abuse-title">AbuseIPDB</span>
+                {data?.abuse_checked_at && (
+                    <span className="abuse-cached">cached {new Date(data.abuse_checked_at).toLocaleDateString()}</span>
+                )}
+            </div>
+            {loading && <div className="abuse-loading">Checking…</div>}
+            {error && <div className="abuse-error">{error}</div>}
+            {data && !loading && (
+                <div className="abuse-grid">
+                    <div className="abuse-score-wrap">
+                        <span className="abuse-score" style={{ color: scoreColor }}>{score ?? '—'}</span>
+                        <span className="abuse-score-label">Confidence Score</span>
+                    </div>
+                    <dl className="abuse-dl">
+                        <dt>Total Reports</dt><dd>{data.abuse_total_reports ?? '—'}</dd>
+                        <dt>ISP</dt><dd>{data.abuse_isp || '—'}</dd>
+                        <dt>Domain</dt><dd>{data.abuse_domain || '—'}</dd>
+                        <dt>Usage Type</dt><dd>{data.abuse_usage_type || '—'}</dd>
+                        <dt>Country</dt><dd>{data.abuse_country_code || '—'}</dd>
+                        {data.abuse_is_tor && <dt>TOR Exit Node</dt>}<dd>{data.abuse_is_tor ? '⚠ Yes' : null}</dd>
+                        {data.abuse_last_reported_at && <><dt>Last Reported</dt><dd>{new Date(data.abuse_last_reported_at).toLocaleDateString()}</dd></>}
+                    </dl>
+                </div>
+            )}
+        </div>
+    )
+}
+
 function RequestDetail({ request, onClose }) {
     if (!request) return null
+    const ip = request.cf_connecting_ip || request.ip_address || null
     return (
         <div className="detail-overlay" onClick={onClose}>
             <div className="detail-panel" onClick={e => e.stopPropagation()}>
@@ -174,6 +227,8 @@ function RequestDetail({ request, onClose }) {
                         <pre className="detail-pre">{JSON.stringify(request.query_params, null, 2)}</pre>
                     </div>
                 )}
+
+                <AbuseIpPanel ip={ip} />
             </div>
         </div>
     )

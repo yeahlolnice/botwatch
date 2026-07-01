@@ -27,6 +27,7 @@ const BOT_PATTERNS = [
     { pattern: /facebot/i, label: 'Facebook Bot', type: 'search-crawler' },
     { pattern: /facebook/i, label: 'Facebook Bot', type: 'search-crawler' },
     { pattern: /ia_archiver/i, label: 'Wayback Machine', type: 'search-crawler' },
+    { pattern: /ahrefs/i, label: 'Ahrefs', type: 'search-crawler' },
 
     // Monitoring / uptime
     { pattern: /UptimeRobot/i, label: 'UptimeRobot', type: 'monitor' },
