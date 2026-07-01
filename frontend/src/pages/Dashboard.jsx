@@ -141,13 +141,13 @@ function AbuseIpPanel({ ip }) {
                             <div className="abuse-report-grid">
                                 {data.abuse_reports.slice(0, 5).map((r, i) => (
                                     <div key={i} className="abuse-report-item">
-                                        <div className="abuse-report-date">{formatDate(r.reported_at)}</div>
+                                        <div className="abuse-report-date">{formatDate(r.reportedAt)}</div>
                                         <div className="abuse-report-comment">{r.comment || 'No comment'}</div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p>No recent reports</p>
+                            <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: 0 }}>No recent reports</p>
                         )}
                     </div>
                 </div>

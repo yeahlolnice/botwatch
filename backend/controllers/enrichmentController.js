@@ -66,6 +66,7 @@ export const checkIp = async (req, res) => {
             data.usageType || null,
             data.isTor || false,
             data.isPublic ?? true,
+            JSON.stringify(data.reports || []),
         ]);
 
         return res.json({ source: 'api', data: row.rows[0] });
@@ -159,10 +160,12 @@ export const getIpSummary = async (req, res) => {
     }
 };
 
-// POST /api/enrich/init — create the enrichment table
+// POST /api/enrich/init — create the enrichment table (idempotent)
 export const initEnrichmentTable = async (req, res) => {
     try {
         await query(createEnrichmentTableQuery);
+        // Add columns introduced after initial table creation
+        await query(`ALTER TABLE ip_enrichment ADD COLUMN IF NOT EXISTS abuse_reports JSONB`);
         return res.json({ message: 'ip_enrichment table ready' });
     } catch (error) {
         console.error('Enrichment init error:', error);
