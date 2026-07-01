@@ -30,7 +30,9 @@ const trackRequest = (req, res, next) => {
         try {
             const responseTime = Date.now() - startTime;
 
-            const { method, path, query: queryParams, headers, body } = req;
+            const { method, query: queryParams, headers, body } = req;
+            // req.path strips the mount prefix (e.g. /api/traffic → /); originalUrl preserves it
+            const path = req.originalUrl.split('?')[0];
             const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
 
             // IP resolution — CF-Connecting-IP is the verified real client IP
@@ -89,7 +91,9 @@ const trackRequest = (req, res, next) => {
                 isTrap, trapType, threatScore, botLabel, crawlerType,
                 signals.length ? JSON.stringify(signals) : null,
                 jsEnabled, screenWidth, null, timezone,
-                null, null, null, null, null, // geo: reserved for future enrichment
+                // Country from Cloudflare header — free, no API needed
+                headers['cf-ipcountry'] || null,
+                null, null, null, null, // region, city, asn, provider — reserved for enrichment
             ]);
         } catch (error) {
             console.error('Tracking error:', error.message);
@@ -99,16 +103,83 @@ const trackRequest = (req, res, next) => {
     next();
 };
 
-// GET /api/traffic — paginated list of recent requests
+// GET /api/traffic — paginated + filtered list of requests
 const getRecentRequests = async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 50, 200);
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const offset = (page - 1) * limit;
 
+        // Build WHERE clauses dynamically from query params
+        const conditions = [];
+        const params = [];
+
+        const search = req.query.search?.trim();
+        if (search) {
+            params.push(`%${search}%`);
+            const n = params.length;
+            conditions.push(`(
+                path ILIKE $${n} OR
+                ip_address::text ILIKE $${n} OR
+                cf_connecting_ip::text ILIKE $${n} OR
+                user_agent ILIKE $${n} OR
+                bot_label ILIKE $${n} OR
+                trap_type ILIKE $${n} OR
+                country ILIKE $${n}
+            )`);
+        }
+
+        if (req.query.method && req.query.method !== 'ALL') {
+            params.push(req.query.method.toUpperCase());
+            conditions.push(`method = $${params.length}`);
+        }
+
+        if (req.query.threat === 'true') {
+            conditions.push(`threat_signals IS NOT NULL AND jsonb_array_length(threat_signals) > 0`);
+        }
+
+        if (req.query.trap === 'true') {
+            conditions.push(`is_trap = TRUE`);
+        }
+
+        if (req.query.country) {
+            params.push(req.query.country);
+            conditions.push(`country ILIKE $${params.length}`);
+        }
+
+        if (req.query.minScore) {
+            params.push(parseInt(req.query.minScore));
+            conditions.push(`bot_score >= $${params.length}`);
+        }
+
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+        const dataParams = [...params, limit, offset];
+        const countParams = [...params];
+
+        const dataQuery = `
+            SELECT
+                id, request_id, timestamp,
+                method, path, full_url, query_params,
+                status_code, response_time_ms,
+                ip_address, x_forwarded_for, cf_connecting_ip,
+                user_agent, referrer,
+                bot_label, crawler_type, bot_score,
+                is_trap, trap_type,
+                threat_signals,
+                accept_language, sec_fetch_site, sec_fetch_mode,
+                country
+            FROM request_tracking
+            ${where}
+            ORDER BY timestamp DESC
+            LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
+        `;
+
+        const countQuery = `SELECT COUNT(*) AS total FROM request_tracking ${where}`;
+
         const [rows, countResult] = await Promise.all([
-            query(getRecentRequestsQuery, [limit, offset]),
-            query(getRequestCountQuery),
+            query(dataQuery, dataParams),
+            query(countQuery, countParams),
         ]);
 
         res.json({
