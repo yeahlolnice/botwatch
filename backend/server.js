@@ -12,6 +12,7 @@ import trackingRoutes from './routes/trackingRoutes.js';
 import honeypotRoutes from './routes/honeypotRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
+import enrichmentRoutes from './routes/enrichmentRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
@@ -60,6 +61,7 @@ app.use('/api', requireAuth);
 
 app.use('/api/users', userRoutes);
 app.use('/api/traffic', trafficLimiter, trackingRoutes);
+app.use('/api/enrich', enrichmentRoutes);
 
 // 404 for unmatched API routes
 app.use('/api', (req, res) => {

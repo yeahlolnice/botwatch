@@ -37,6 +37,18 @@
   text-decoration: none;
 }
 
+.nav-signout {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.nav-signout:hover { color: var(--text); }
+
 /* ── Login page ─────────────────────────────────────────────────── */
 .login-page {
   min-height: 100vh;

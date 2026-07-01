@@ -190,6 +190,9 @@ export default function Landing() {
 
       <footer className="landing-footer">
         <span>botwatch<span style={{ color: 'var(--accent)' }}>.xyz</span></span>
+        <a href="https://www.abuseipdb.com/user/324210" target="_blank" rel="noopener noreferrer"  title="AbuseIPDB is an IP address blacklist for webmasters and sysadmins to report IP addresses engaging in abusive behavior on their networks">
+          <img src="https://www.abuseipdb.com/contributor/324210.svg" alt="AbuseIPDB Contributor Badge" style={{ width: 200, background: '#35c246', linearGradient:'(rgba(255,255,255,0), rgba(255,255,255,.3) 50%, rgba(0,0,0,.2) 51%, rgba(0,0,0,0))', padding: '5px' }} />
+        </a>
         <span style={{ color: 'var(--text-dim)' }}>Cybersecurity research. All data collected passively.</span>
       </footer>
     </main>

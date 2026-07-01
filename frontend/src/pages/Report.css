@@ -1,0 +1,238 @@
+.report-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.report-header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.report-header p {
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.abuseipdb-badge {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+.report-loading,
+.report-empty,
+.report-err {
+    font-size: 13px;
+    color: var(--text-dim);
+    padding: 40px 0;
+    text-align: center;
+}
+
+.report-err { color: #ef4444; }
+
+/* Candidate cards */
+.candidates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.candidate-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    transition: border-color 0.15s;
+}
+
+.candidate-card:hover { border-color: var(--accent); }
+.candidate-reported { opacity: 0.5; }
+
+.candidate-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 16px;
+    align-items: center;
+}
+
+.candidate-ip-col {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.candidate-ip {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.tor-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    font-weight: 700;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.reported-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    font-weight: 700;
+}
+
+.candidate-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.candidate-abuse {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    min-width: 120px;
+}
+
+.abuse-score-chip {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.candidate-isp {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.check-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.check-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.check-btn:disabled { opacity: 0.5; cursor: default; }
+
+.expand-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.expand-btn:hover:not(:disabled) { border-color: #ef4444; color: #ef4444; }
+.expand-btn.active { background: rgba(239, 68, 68, 0.08); border-color: rgba(239,68,68,0.4); color: #ef4444; }
+.expand-btn:disabled { opacity: 0.4; cursor: default; }
+
+.candidate-traps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.trap-tag {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+/* Report form */
+.report-form {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.report-cats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cat-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+}
+.cat-chip input { display: none; }
+.cat-chip:hover { color: var(--text); border-color: var(--accent); }
+.cat-chip.active { background: rgba(99,102,241,0.12); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+.report-comment {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 10px 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: var(--font);
+}
+.report-comment:focus { border-color: var(--accent); }
+.report-comment::placeholder { color: var(--text-dim); }
+
+.report-submit {
+    align-self: flex-start;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.report-submit:hover:not(:disabled) { opacity: 0.85; }
+.report-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.report-error { font-size: 13px; color: #ef4444; margin: 0; }
+.report-success { font-size: 13px; color: #22c55e; margin: 0; }
