@@ -6,6 +6,21 @@
 
 .margin-top-small { margin-top: 12px; }
 
+.abuse-report-date {
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: small;
+    margin: 5px 10px;
+    font-weight: bold;
+}
+
+.abuse-report-comment {
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: smaller;
+    margin: 5px 10px;
+}
+
 .dash-header {
     display: flex;
     align-items: flex-start;
