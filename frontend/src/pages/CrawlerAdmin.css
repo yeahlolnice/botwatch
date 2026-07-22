@@ -126,7 +126,6 @@
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 12px;
-    width: 164px;
 }
 
 .crawler-status-section, .crawler-log-section {
@@ -183,8 +182,8 @@
     font-size: 12px;
 }
 
-.crawler-readiness-dl dt { color: var(--text-dim); }
-.crawler-readiness-dl dd { color: var(--text); font-family: var(--mono); text-align: right; }
+.crawler-readiness-dl dt { color: var(--text); }
+.crawler-readiness-dl dd { color: var(--text-dim); font-family: var(--mono); text-align: right; }
 
 .crawler-empty {
     color: var(--text-dim);
