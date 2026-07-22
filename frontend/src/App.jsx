@@ -4,6 +4,7 @@ import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Intel from './pages/Intel'
 import Readiness from './pages/Readiness'
+import Willowbot from './pages/Willowbot'
 import CrawlerAdmin from './pages/CrawlerAdmin'
 import Report from './pages/Report'
 import Login from './pages/Login'
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/intel" element={<Intel />} />
         <Route path="/readiness" element={<Readiness />} />
+        <Route path="/willowbot" element={<Willowbot />} />
         <Route
           path="/report"
           element={
