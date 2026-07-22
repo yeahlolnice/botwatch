@@ -19,6 +19,7 @@ import { processNextQueuedSitemap } from '../crawler/processNextQueuedSitemap.js
 import { crawlerEnv } from '../crawler/crawlerEnv.js';
 import { parseUrlParts } from '../crawler/urlUtils.js';
 import { isHostnameBlocked } from '../crawler/ssrfGuard.js';
+import { crawlRunTracker, sitemapRunTracker } from '../crawler/runState.js';
 
 // POST /api/crawler/init — create the crawler tables + AI-readiness columns (idempotent)
 export const initCrawlerTables = async (req, res) => {
@@ -72,24 +73,44 @@ export const seedDomains = async (req, res) => {
 };
 
 // POST /api/crawler/run — body (optional): { maxPagesPerDomain, maxDomainsThisRun }
+// Fire-and-forget: a full batch can take several minutes (many sequential
+// fetches with politeness delays), which was long enough to trip the
+// reverse proxy's gateway timeout if this route waited for it — the admin
+// would see a 502 even though the crawl was working fine server-side. This
+// now starts the batch, responds immediately, and the admin UI polls
+// GET /api/crawler/status (which includes crawlRunTracker's state) instead.
 export const runCrawlBatch = async (req, res) => {
+    if (crawlRunTracker.isRunning()) {
+        return res.status(409).json({ error: 'A crawl batch is already running' });
+    }
+
     const maxPagesPerDomain = Number(req.body?.maxPagesPerDomain) || crawlerEnv.crawlerMaxPagesPerDomain;
     const maxDomainsThisRun = Number(req.body?.maxDomainsThisRun) || crawlerEnv.crawlerMaxDomainsPerRun;
 
-    try {
-        const result = await runCrawler({ maxPagesPerDomain, maxDomainsThisRun });
-        return res.json(result);
-    } catch (error) {
-        console.error('Run crawler error:', error);
-        return res.status(500).json({ error: 'Failed to run crawler batch' });
-    }
+    crawlRunTracker.start();
+    res.status(202).json({ started: true, maxPagesPerDomain, maxDomainsThisRun });
+
+    runCrawler({ maxPagesPerDomain, maxDomainsThisRun })
+        .then(result => crawlRunTracker.finish(result))
+        .catch(error => {
+            console.error('Run crawler error:', error);
+            crawlRunTracker.fail(error);
+        });
 };
 
 // POST /api/crawler/sitemaps/process — body (optional): { maxSitemapsThisRun }
+// Same fire-and-forget shape as runCrawlBatch, for the same reason.
 export const processSitemaps = async (req, res) => {
+    if (sitemapRunTracker.isRunning()) {
+        return res.status(409).json({ error: 'Sitemap processing is already running' });
+    }
+
     const maxSitemapsThisRun = Number(req.body?.maxSitemapsThisRun) || crawlerEnv.crawlerMaxSitemapsPerRun;
 
-    try {
+    sitemapRunTracker.start();
+    res.status(202).json({ started: true, maxSitemapsThisRun });
+
+    (async () => {
         const results = [];
 
         for (let i = 0; i < maxSitemapsThisRun; i++) {
@@ -99,11 +120,13 @@ export const processSitemaps = async (req, res) => {
             if (!result.processed) break;
         }
 
-        return res.json({ ok: true, processedCount: results.filter(r => r.processed).length, results });
-    } catch (error) {
-        console.error('Process sitemaps error:', error);
-        return res.status(500).json({ error: 'Failed to process sitemaps' });
-    }
+        return { ok: true, processedCount: results.filter(r => r.processed).length, results };
+    })()
+        .then(result => sitemapRunTracker.finish(result))
+        .catch(error => {
+            console.error('Process sitemaps error:', error);
+            sitemapRunTracker.fail(error);
+        });
 };
 
 // GET /api/crawler/status
@@ -119,6 +142,8 @@ export const getCrawlerStatus = async (req, res) => {
         return res.json({
             domains: { byStatus: domainStatus, readiness: domainReadiness },
             pages: { byStatus: pageStatus, readiness: pageReadiness },
+            crawl: crawlRunTracker.getState(),
+            sitemaps: sitemapRunTracker.getState(),
         });
     } catch (error) {
         console.error('Crawler status error:', error);
