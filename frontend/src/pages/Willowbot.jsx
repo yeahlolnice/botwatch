@@ -25,19 +25,24 @@ const behaviors = [
 export default function Willowbot() {
   return (
     <main className="willowbot-page">
-      <section className="wb-hero">
-        <div className="wb-badge">botwatch research crawler</div>
-        <h1>Willowbot</h1>
-        <p className="wb-desc">
-          Willowbot is a small, polite web crawler run by botwatch as part of our research into
-          how the world is adapting to the rapidly growing wave of AI traffic — LLM crawlers, AI
-          agents, and automated scanning of every kind.
-        </p>
-        <div className="wb-actions">
-          <Link to="/readiness" className="btn-primary">See what it's found →</Link>
-          <a href="#how-to-block" className="btn-ghost">How to block it</a>
+      <section className="wb-banner" style={{ backgroundImage: "url('/Willow-relax.jpg')" }}>
+        <div className="wb-banner-overlay" />
+        <div className="wb-hero">
+          <div className="wb-badge">botwatch research crawler</div>
+          <h1>Willowbot</h1>
+          <p className="wb-desc">
+            Willowbot is a small, polite web crawler run by botwatch as part of our research into
+            how the world is adapting to the rapidly growing wave of AI traffic — LLM crawlers, AI
+            agents, and automated scanning of every kind.
+          </p>
+          <div className="wb-actions">
+            <Link to="/readiness" className="btn-primary">See what it's found →</Link>
+            <a href="#how-to-block" className="btn-ghost">How to block it</a>
+          </div>
         </div>
       </section>
+
+      <div className="wb-content">
 
       <section className="wb-section">
         <h2 className="section-title">Why Willowbot exists</h2>
@@ -111,6 +116,8 @@ export default function Willowbot() {
       <div className="wb-footer">
         <span>Part of the botwatch research project.</span>
         <Link to="/">← Back to home</Link>
+      </div>
+
       </div>
     </main>
   )
