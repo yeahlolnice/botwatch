@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiFetch } from '../api.js'
 import './CrawlerAdmin.css'
+
+const POLL_INTERVAL_MS = 3000
 
 function StatusTable({ title, rows }) {
     return (
@@ -22,6 +24,28 @@ function StatusTable({ title, rows }) {
     )
 }
 
+function RunningBadge({ tracker }) {
+    if (!tracker) return null
+    if (tracker.running) {
+        return <span className="crawler-running-badge crawler-running-badge--active">● running since {new Date(tracker.startedAt).toLocaleTimeString()}</span>
+    }
+    if (tracker.lastError) {
+        return <span className="crawler-running-badge crawler-running-badge--error">last run failed: {tracker.lastError}</span>
+    }
+    if (tracker.finishedAt) {
+        return <span className="crawler-running-badge">idle — last finished {new Date(tracker.finishedAt).toLocaleTimeString()}</span>
+    }
+    return null
+}
+
+function summarizeRunResult(kind, result) {
+    if (!result) return null
+    if (kind === 'crawl') {
+        return `Crawl batch: ${result.domainsProcessed} domain(s) processed (${result.stoppedReason})`
+    }
+    return `Processed ${result.processedCount} sitemap(s)`
+}
+
 export default function CrawlerAdmin() {
     const [isAdmin, setIsAdmin] = useState(null) // null = loading
     const [status, setStatus] = useState(null)
@@ -32,6 +56,8 @@ export default function CrawlerAdmin() {
     const [seedInput, setSeedInput] = useState('')
     const [maxPagesPerDomain, setMaxPagesPerDomain] = useState('')
     const [maxDomainsThisRun, setMaxDomainsThisRun] = useState('')
+
+    const pollIntervalsRef = useRef({})
 
     useEffect(() => {
         fetch('/api/auth/me', { credentials: 'include' })
@@ -49,37 +75,63 @@ export default function CrawlerAdmin() {
         try {
             const data = await apiFetch('/api/crawler/status')
             setStatus(data)
+            return data
         } catch (e) {
             pushLog(`Status fetch failed: ${e.message}`)
+            return null
         } finally {
             setStatusLoading(false)
         }
     }, [])
 
-    useEffect(() => {
-        if (isAdmin) fetchStatus()
-    }, [isAdmin, fetchStatus])
+    // Long jobs (crawl batch, sitemap processing) run in the background on
+    // the server now — poll status until the tracker reports it's done,
+    // rather than holding one HTTP request open the whole time (that used
+    // to trip the reverse proxy's gateway timeout on longer batches).
+    const pollUntilDone = useCallback((kind, label) => {
+        if (pollIntervalsRef.current[kind]) return // already polling
 
-    const runAction = async (key, fn, successLabel) => {
-        setBusy(key)
-        try {
-            const result = await fn()
-            pushLog(successLabel(result))
-            await fetchStatus()
-        } catch (e) {
-            pushLog(`${key} failed: ${e.message}`)
-        } finally {
+        const intervalId = setInterval(async () => {
+            const data = await fetchStatus()
+            const tracker = data?.[kind]
+            if (!tracker || tracker.running) return
+
+            clearInterval(intervalId)
+            delete pollIntervalsRef.current[kind]
             setBusy(null)
+
+            if (tracker.lastError) {
+                pushLog(`${label} failed: ${tracker.lastError}`)
+            } else {
+                pushLog(summarizeRunResult(kind, tracker.lastResult) || `${label} finished`)
+            }
+        }, POLL_INTERVAL_MS)
+
+        pollIntervalsRef.current[kind] = intervalId
+    }, [fetchStatus])
+
+    useEffect(() => {
+        return () => {
+            Object.values(pollIntervalsRef.current).forEach(clearInterval)
         }
-    }
+    }, [])
 
-    const handleInit = () => runAction(
-        'init',
-        () => apiFetch('/api/crawler/init', { method: 'POST' }),
-        () => 'Crawler tables ready'
-    )
+    useEffect(() => {
+        if (!isAdmin) return
+        fetchStatus().then(data => {
+            // Resume polling if a batch was already in flight (e.g. page reload mid-run).
+            if (data?.crawl?.running) {
+                setBusy('run')
+                pollUntilDone('crawl', 'Crawl batch')
+            }
+            if (data?.sitemaps?.running) {
+                setBusy('sitemaps')
+                pollUntilDone('sitemaps', 'Sitemap processing')
+            }
+        })
+    }, [isAdmin, fetchStatus, pollUntilDone])
 
-    const handleSeed = () => {
+    const handleSeed = async () => {
         const hostnames = seedInput
             .split(/[\n,]/)
             .map(s => s.trim())
@@ -90,35 +142,50 @@ export default function CrawlerAdmin() {
             return
         }
 
-        return runAction(
-            'seed',
-            () => apiFetch('/api/crawler/domains/seed', {
+        setBusy('seed')
+        try {
+            const result = await apiFetch('/api/crawler/domains/seed', {
                 method: 'POST',
                 body: JSON.stringify({ hostnames }),
-            }),
-            (result) => result.rejected?.length > 0
+            })
+            pushLog(result.rejected?.length > 0
                 ? `Seeded ${result.seededCount} domain(s) — rejected as private/internal: ${result.rejected.join(', ')}`
-                : `Seeded ${result.seededCount} domain(s)`
-        )
+                : `Seeded ${result.seededCount} domain(s)`)
+            await fetchStatus()
+        } catch (e) {
+            pushLog(`seed failed: ${e.message}`)
+        } finally {
+            setBusy(null)
+        }
     }
 
-    const handleRun = () => {
+    const handleRun = async () => {
         const body = {}
         if (maxPagesPerDomain) body.maxPagesPerDomain = Number(maxPagesPerDomain)
         if (maxDomainsThisRun) body.maxDomainsThisRun = Number(maxDomainsThisRun)
 
-        return runAction(
-            'run',
-            () => apiFetch('/api/crawler/run', { method: 'POST', body: JSON.stringify(body) }),
-            (result) => `Crawl run: ${result.domainsProcessed} domain(s) processed (${result.stoppedReason})`
-        )
+        setBusy('run')
+        try {
+            await apiFetch('/api/crawler/run', { method: 'POST', body: JSON.stringify(body) })
+            pushLog('Crawl batch started…')
+            pollUntilDone('crawl', 'Crawl batch')
+        } catch (e) {
+            setBusy(null)
+            pushLog(`run failed: ${e.message}`)
+        }
     }
 
-    const handleProcessSitemaps = () => runAction(
-        'sitemaps',
-        () => apiFetch('/api/crawler/sitemaps/process', { method: 'POST', body: JSON.stringify({}) }),
-        (result) => `Processed ${result.processedCount} sitemap(s)`
-    )
+    const handleProcessSitemaps = async () => {
+        setBusy('sitemaps')
+        try {
+            await apiFetch('/api/crawler/sitemaps/process', { method: 'POST', body: JSON.stringify({}) })
+            pushLog('Sitemap processing started…')
+            pollUntilDone('sitemaps', 'Sitemap processing')
+        } catch (e) {
+            setBusy(null)
+            pushLog(`sitemaps failed: ${e.message}`)
+        }
+    }
 
     if (isAdmin === null) return null
 
@@ -146,16 +213,9 @@ export default function CrawlerAdmin() {
             </div>
 
             <div className="crawler-grid">
-                <div className="crawler-card">
-                    <h3>1. Init tables</h3>
-                    <p className="crawler-card-sub">Create the crawler tables and AI-readiness columns (safe to run repeatedly).</p>
-                    <button className="crawler-btn crawler-btn--primary" onClick={handleInit} disabled={busy !== null}>
-                        {busy === 'init' ? 'Running…' : 'Init tables'}
-                    </button>
-                </div>
 
                 <div className="crawler-card">
-                    <h3>2. Seed domains</h3>
+                    <h3>1. Seed domains</h3>
                     <p className="crawler-card-sub">Hostnames to start crawling from (comma or newline separated). Needed at least once — the crawler only expands from what's already queued.</p>
                     <textarea
                         className="crawler-textarea"
@@ -170,8 +230,8 @@ export default function CrawlerAdmin() {
                 </div>
 
                 <div className="crawler-card">
-                    <h3>3. Run crawl batch</h3>
-                    <p className="crawler-card-sub">Crawls queued domains one page at a time, respecting robots.txt and a polite delay between requests.</p>
+                    <h3>2. Run crawl batch</h3>
+                    <p className="crawler-card-sub">Crawls queued domains one page at a time, respecting robots.txt and a polite delay between requests. Stops early if 3 domains in a row fail.</p>
                     <div className="crawler-run-inputs">
                         <label>
                             Max pages/domain
@@ -185,14 +245,16 @@ export default function CrawlerAdmin() {
                     <button className="crawler-btn crawler-btn--primary" onClick={handleRun} disabled={busy !== null}>
                         {busy === 'run' ? 'Crawling…' : 'Run crawl batch'}
                     </button>
+                    <RunningBadge tracker={status?.crawl} />
                 </div>
 
                 <div className="crawler-card">
-                    <h3>4. Process queued sitemaps</h3>
+                    <h3>3. Process queued sitemaps</h3>
                     <p className="crawler-card-sub">Drains queued sitemaps, importing the page URLs they contain.</p>
                     <button className="crawler-btn crawler-btn--primary" onClick={handleProcessSitemaps} disabled={busy !== null}>
                         {busy === 'sitemaps' ? 'Processing…' : 'Process sitemaps'}
                     </button>
+                    <RunningBadge tracker={status?.sitemaps} />
                 </div>
             </div>
 

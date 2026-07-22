@@ -11,9 +11,10 @@ import { crawlDomainLoop } from './crawlDomainLoop.js';
 // continuously and non-intrusively, call it on an interval (e.g. from
 // server.js) rather than switching to concurrent domain processing, which
 // would undermine the per-domain politeness delay in crawlDomainLoop.
-export async function runCrawler({ maxPagesPerDomain = 10, maxDomainsThisRun = 10 } = {}) {
+export async function runCrawler({ maxPagesPerDomain = 10, maxDomainsThisRun = 10, maxConsecutiveFailures = 3 } = {}) {
     const domainResults = [];
     let domainsProcessed = 0;
+    let consecutiveFailures = 0;
 
     while (domainsProcessed < maxDomainsThisRun) {
         const nextDomain = await getNextQueuedDomain();
@@ -41,7 +42,11 @@ export async function runCrawler({ maxPagesPerDomain = 10, maxDomainsThisRun = 1
                 domain: doneDomain,
                 crawlResult
             });
+
+            consecutiveFailures = 0;
         } catch (error) {
+            // Log and move on to the next domain — one bad site (a 502, a
+            // timeout, a blocked host) shouldn't derail the whole batch.
             console.error(`Domain crawl failed for ${nextDomain.hostname}:`, error);
 
             const erroredDomain = await markDomainAsError(nextDomain.id);
@@ -51,6 +56,24 @@ export async function runCrawler({ maxPagesPerDomain = 10, maxDomainsThisRun = 1
                 domain: erroredDomain,
                 error: String(error.message || error)
             });
+
+            consecutiveFailures += 1;
+            domainsProcessed += 1;
+
+            // ...but if failures are stacking up back to back, something is
+            // more likely systemic (network down, DNS broken) than a run of
+            // bad luck on individual sites — stop rather than burn through
+            // the rest of the queue the same way.
+            if (consecutiveFailures >= maxConsecutiveFailures) {
+                return {
+                    ok: true,
+                    stoppedReason: `Stopped after ${consecutiveFailures} consecutive domain failures`,
+                    domainsProcessed,
+                    domainResults
+                };
+            }
+
+            continue;
         }
 
         domainsProcessed += 1;

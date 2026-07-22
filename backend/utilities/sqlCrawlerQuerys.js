@@ -62,13 +62,44 @@ ALTER TABLE pages
   ADD COLUMN IF NOT EXISTS json_ld_count INTEGER;
 `;
 
+// Site-profile columns: contacts, socials, category, tech stack, AI-training
+// policy, T&C link, subdomain grouping, and an overall AI-readiness score.
+export const addDomainProfileColumnsQuery = `
+ALTER TABLE domains
+  ADD COLUMN IF NOT EXISTS root_domain TEXT,
+  ADD COLUMN IF NOT EXISTS robots_txt_found BOOLEAN,
+  ADD COLUMN IF NOT EXISTS category TEXT,
+  ADD COLUMN IF NOT EXISTS tech_stack JSONB,
+  ADD COLUMN IF NOT EXISTS ai_txt_found BOOLEAN,
+  ADD COLUMN IF NOT EXISTS ai_txt_checked_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS humans_txt_found BOOLEAN,
+  ADD COLUMN IF NOT EXISTS humans_txt_checked_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS ai_training_policy JSONB,
+  ADD COLUMN IF NOT EXISTS ai_training_policy_explicit BOOLEAN,
+  ADD COLUMN IF NOT EXISTS terms_url TEXT,
+  ADD COLUMN IF NOT EXISTS ai_readiness_score INTEGER;
+`;
+
+export const addDomainRootDomainIndexQuery = `
+CREATE INDEX IF NOT EXISTS idx_domains_root_domain ON domains (root_domain);
+`;
+
+export const addPageContentColumnsQuery = `
+ALTER TABLE pages
+  ADD COLUMN IF NOT EXISTS title TEXT,
+  ADD COLUMN IF NOT EXISTS meta_description TEXT,
+  ADD COLUMN IF NOT EXISTS emails JSONB,
+  ADD COLUMN IF NOT EXISTS phone_numbers JSONB,
+  ADD COLUMN IF NOT EXISTS social_links JSONB;
+`;
+
 // --- domains ---
 
 export const ensureDomainQuery = `
-INSERT INTO domains (hostname)
-VALUES ($1)
+INSERT INTO domains (hostname, root_domain)
+VALUES ($1, $2)
 ON CONFLICT (hostname)
-DO UPDATE SET updated_at = NOW()
+DO UPDATE SET updated_at = NOW(), root_domain = EXCLUDED.root_domain
 RETURNING *;
 `;
 
@@ -143,6 +174,55 @@ export const getDomainStatusCountsQuery = `
 SELECT status, COUNT(*)::int AS count FROM domains GROUP BY status;
 `;
 
+// Merges in newly-found tech stack entries (union, no duplicates) rather than
+// overwriting — later crawled pages on the same domain add to the picture
+// instead of replacing it. category/terms_url only get set if not already
+// present, so the first confident finding sticks.
+export const updateDomainProfileQuery = `
+UPDATE domains
+SET
+  category = COALESCE(category, $2),
+  tech_stack = COALESCE((
+    SELECT jsonb_agg(DISTINCT elem ORDER BY elem)
+    FROM jsonb_array_elements_text(COALESCE(tech_stack, '[]'::jsonb) || $3::jsonb) AS elem
+  ), '[]'::jsonb),
+  terms_url = COALESCE(terms_url, $4),
+  updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+`;
+
+export const updateDomainAiTrainingPolicyQuery = `
+UPDATE domains SET ai_training_policy = $2, ai_training_policy_explicit = $3, updated_at = NOW() WHERE id = $1 RETURNING *;
+`;
+
+export const updateDomainRobotsTxtFoundQuery = `
+UPDATE domains SET robots_txt_found = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
+`;
+
+export const updateDomainAiTxtQuery = `
+UPDATE domains SET ai_txt_found = $2, ai_txt_checked_at = NOW() WHERE id = $1 RETURNING *;
+`;
+
+export const updateDomainHumansTxtQuery = `
+UPDATE domains SET humans_txt_found = $2, humans_txt_checked_at = NOW() WHERE id = $1 RETURNING *;
+`;
+
+export const updateDomainAiReadinessScoreQuery = `
+UPDATE domains SET ai_readiness_score = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
+`;
+
+export const getSubdomainCountQuery = `
+SELECT COUNT(*)::int AS count FROM domains WHERE root_domain = $1 AND hostname <> $2;
+`;
+
+// Used to (re)compute the AI-readiness score after each page crawl — JSON-LD
+// presence is a page-level finding but the score is domain-level, so this
+// checks whether *any* crawled page for the domain has found it yet.
+export const getDomainHasJsonLdQuery = `
+SELECT EXISTS(SELECT 1 FROM pages WHERE domain_id = $1 AND json_ld_found = TRUE) AS has_json_ld;
+`;
+
 // --- pages ---
 
 export const ensurePageQuery = `
@@ -200,6 +280,32 @@ FROM pages;
 
 export const getPageStatusCountsQuery = `
 SELECT status, COUNT(*)::int AS count FROM pages GROUP BY status;
+`;
+
+export const updatePageContentQuery = `
+UPDATE pages
+SET title = $2, meta_description = $3, emails = $4, phone_numbers = $5, social_links = $6
+WHERE id = $1
+RETURNING *;
+`;
+
+export const getMostRecentCrawledPageForDomainQuery = `
+SELECT * FROM pages WHERE domain_id = $1 AND status = 'crawled' ORDER BY crawled_at DESC LIMIT 1;
+`;
+
+// Flattens and dedupes emails/phone_numbers/social_links across every page
+// crawled for a domain, in one round trip — used by the public site-search API.
+export const getDomainAggregatedContactsQuery = `
+SELECT
+  (SELECT COALESCE(jsonb_agg(DISTINCT e), '[]'::jsonb)
+     FROM pages p, jsonb_array_elements_text(COALESCE(p.emails, '[]'::jsonb)) AS e
+     WHERE p.domain_id = $1) AS emails,
+  (SELECT COALESCE(jsonb_agg(DISTINCT ph), '[]'::jsonb)
+     FROM pages p, jsonb_array_elements_text(COALESCE(p.phone_numbers, '[]'::jsonb)) AS ph
+     WHERE p.domain_id = $1) AS phone_numbers,
+  (SELECT COALESCE(jsonb_agg(DISTINCT s), '[]'::jsonb)
+     FROM pages p, jsonb_array_elements_text(COALESCE(p.social_links, '[]'::jsonb)) AS s
+     WHERE p.domain_id = $1) AS social_links;
 `;
 
 // --- links ---
