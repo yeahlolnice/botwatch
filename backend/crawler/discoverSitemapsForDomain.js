@@ -1,7 +1,16 @@
 import { fetchRobotsTxt } from './robotsFetcher.js';
 import { checkSitemapUrl } from './sitemapFetcher.js';
-import { checkLlmsTxtForDomain } from './aiReadiness.js';
-import { ensureSitemap, updateDomainAiReadiness } from './db.js';
+import { checkLlmsTxtForDomain, checkAiTxtForDomain, checkHumansTxtForDomain } from './aiReadiness.js';
+import { getAiTrainingPolicy } from './aiTrainingPolicy.js';
+import { recomputeAndStoreDomainScore } from './aiReadinessScore.js';
+import {
+    ensureSitemap,
+    updateDomainAiReadiness,
+    updateDomainRobotsTxtFound,
+    updateDomainAiTxt,
+    updateDomainHumansTxt,
+    updateDomainAiTrainingPolicy,
+} from './db.js';
 import { isHostnameBlocked } from './ssrfGuard.js';
 import { parseUrlParts } from './urlUtils.js';
 import {
@@ -10,7 +19,9 @@ import {
 } from './sitemapDiscoveryCache.js';
 
 // Runs once per domain (cached), alongside sitemap discovery: checks robots.txt/sitemaps
-// as before, and now also checks /llms.txt as an AI-readiness signal for the domain.
+// as before, plus /llms.txt, /ai.txt, /humans.txt, and the domain's AI
+// training policy (derived from the robots.txt already fetched here — no
+// extra request) as AI-readiness signals for the domain.
 export async function discoverSitemapsForDomain(domain) {
     const cachedResult = getCachedSitemapDiscovery(domain.hostname);
 
@@ -19,6 +30,7 @@ export async function discoverSitemapsForDomain(domain) {
     }
 
     const robotsResult = await fetchRobotsTxt(domain.hostname);
+    await updateDomainRobotsTxtFound(domain.id, robotsResult.ok);
 
     let sitemapUrls = [...robotsResult.sitemapUrls];
 
@@ -56,14 +68,29 @@ export async function discoverSitemapsForDomain(domain) {
         savedSitemaps.push(sitemap);
     }
 
-    const llmsTxtResult = await checkLlmsTxtForDomain(domain.hostname);
+    const [llmsTxtResult, aiTxtResult, humansTxtResult] = await Promise.all([
+        checkLlmsTxtForDomain(domain.hostname),
+        checkAiTxtForDomain(domain.hostname),
+        checkHumansTxtForDomain(domain.hostname),
+    ]);
+
     await updateDomainAiReadiness(domain.id, llmsTxtResult);
+    await updateDomainAiTxt(domain.id, aiTxtResult.found);
+    await updateDomainHumansTxt(domain.id, humansTxtResult.found);
+
+    const { policy: aiTrainingPolicy, hasExplicitPolicy } = getAiTrainingPolicy(robotsResult.body);
+    await updateDomainAiTrainingPolicy(domain.id, aiTrainingPolicy, hasExplicitPolicy);
+
+    await recomputeAndStoreDomainScore(domain.id, domain.hostname);
 
     const result = {
         robotsResult,
         sitemapUrls: uniqueSitemapUrls,
         savedSitemaps,
-        llmsTxtResult
+        llmsTxtResult,
+        aiTxtResult,
+        humansTxtResult,
+        aiTrainingPolicy
     };
 
     setCachedSitemapDiscovery(domain.hostname, result);

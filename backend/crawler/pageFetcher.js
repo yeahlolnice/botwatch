@@ -1,6 +1,19 @@
 import { crawlerEnv } from './crawlerEnv.js';
 import { safeFetch } from './ssrfGuard.js';
 
+// Signals used only for tech-stack fingerprinting — cookie *names* only,
+// never values, since values can carry session/identity data we have no
+// reason to store.
+function extractTechHeaders(headers) {
+    const cookieNames = headers.getSetCookie().map(cookie => cookie.split('=')[0].trim());
+
+    return {
+        server: headers.get('server') || null,
+        poweredBy: headers.get('x-powered-by') || null,
+        cookieNames,
+    };
+}
+
 export async function fetchPage(url) {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
@@ -17,6 +30,7 @@ export async function fetchPage(url) {
         });
 
         const contentType = response.headers.get('content-type') || '';
+        const techHeaders = extractTechHeaders(response.headers);
 
         if (!contentType.includes('text/html')) {
             return {
@@ -24,6 +38,7 @@ export async function fetchPage(url) {
                 isHtml: false,
                 status: response.status,
                 contentType,
+                techHeaders,
                 html: null
             };
         }
@@ -35,6 +50,7 @@ export async function fetchPage(url) {
             isHtml: true,
             status: response.status,
             contentType,
+            techHeaders,
             html
         };
     } finally {

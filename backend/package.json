@@ -21,6 +21,7 @@
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "nodemon": "^3.1.14",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "psl": "^1.15.0"
   }
 }

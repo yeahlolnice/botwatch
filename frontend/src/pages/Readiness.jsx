@@ -85,7 +85,7 @@ export default function Readiness() {
       </div>
 
       <div className="readiness-footer">
-        <span>Data collected by <Link to="/willowbot">Willowbot</Link>, which respects robots.txt on every site it visits.</span>
+        <span>Data collected by <Link to="/willowbot">Willowbot</Link>. 🐕 Look up any site on the <Link to="/search">search page</Link>.</span>
         <Link to="/">← Back to home</Link>
       </div>
     </main>

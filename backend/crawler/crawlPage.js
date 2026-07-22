@@ -1,14 +1,21 @@
 import { parseUrlParts, resolveUrl } from './urlUtils.js';
 import { fetchPage } from './pageFetcher.js';
-import { extractLinks, extractJsonLd } from './linkExtractor.js';
+import { parsePage } from './linkExtractor.js';
 import { checkRobotsForUrl } from './checkRobotsForUrl.js';
 import { isHostnameBlocked } from './ssrfGuard.js';
+import { detectTechStack } from './techStackDetector.js';
+import { classifyCategory } from './categoryClassifier.js';
+import { isSocialHostname } from './socialLinks.js';
+import { looksLikeTermsPath } from './termsLinkDetector.js';
+import { recomputeAndStoreDomainScore } from './aiReadinessScore.js';
 import {
     ensureDomain,
     ensurePage,
     markPageAsCrawled,
     markPageAsSkipped,
     updatePageAiReadiness,
+    updatePageContent,
+    updateDomainProfile,
     ensureLink,
 } from './db.js';
 
@@ -65,20 +72,49 @@ export async function crawlPage(rawUrl) {
         };
     }
 
-    const jsonLdResult = extractJsonLd(fetchResult.html);
+    const {
+        links: rawLinks,
+        emails: rawEmails,
+        phoneNumbers: rawPhoneNumbers,
+        jsonLd: jsonLdResult,
+        title,
+        metaDescription,
+        metaGenerator,
+        scriptSrcs,
+    } = parsePage(fetchResult.html);
+
     await updatePageAiReadiness(page.id, jsonLdResult);
 
-    const rawLinks = extractLinks(fetchResult.html);
+    const techStack = detectTechStack({
+        html: fetchResult.html,
+        scriptSrcs,
+        metaGenerator,
+        techHeaders: fetchResult.techHeaders,
+    });
+    const category = classifyCategory(jsonLdResult.types);
+
     const discoveredLinks = [];
     const discoveredDomainsMap = new Map();
     const discoveredPagesMap = new Map();
     const savedLinksMap = new Map();
+    const pageSocialLinks = [];
+    let termsUrl = null;
 
     for (const rawHref of rawLinks) {
         const resolved = resolveUrl(rawHref, parsed.fullUrl);
 
         if (!resolved) {
             continue;
+        }
+
+        if (isSocialHostname(resolved.hostname)) {
+            pageSocialLinks.push(resolved.fullUrl);
+        }
+
+        // Only trust a Terms & Conditions link that points back at the same
+        // site being crawled, not some other domain's terms page.
+        if (!termsUrl && resolved.hostname === parsed.hostname && looksLikeTermsPath(resolved.path)) {
+            termsUrl = resolved.fullUrl;
         }
 
         // Never queue a link-discovered host that points at a private/internal
@@ -112,7 +148,20 @@ export async function crawlPage(rawUrl) {
         }
     }
 
+    await updatePageContent(page.id, {
+        title,
+        metaDescription,
+        emails: rawEmails,
+        phoneNumbers: rawPhoneNumbers,
+        socialLinks: pageSocialLinks,
+    });
+    await updateDomainProfile(domain.id, { category, techStack, termsUrl });
+
     const crawledPage = await markPageAsCrawled(page.id);
+
+    // JSON-LD presence and the terms link above can newly affect the score
+    // on any page, not just the domain's homepage — recompute after every crawl.
+    await recomputeAndStoreDomainScore(domain.id, domain.hostname);
 
     const discoveredDomains = Array.from(discoveredDomainsMap.values());
     const discoveredPages = Array.from(discoveredPagesMap.values());
@@ -124,7 +173,13 @@ export async function crawlPage(rawUrl) {
         blockedByRobots: false,
         robotsCheck,
         jsonLdResult,
+        techStack,
+        category,
+        termsUrl,
         rawLinks,
+        rawEmails,
+        rawPhoneNumbers,
+        pageSocialLinks,
         discoveredLinks,
         discoveredDomains,
         discoveredPages,

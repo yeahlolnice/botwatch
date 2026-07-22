@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Intel from './pages/Intel'
 import Readiness from './pages/Readiness'
 import Willowbot from './pages/Willowbot'
+import SiteSearch from './pages/SiteSearch'
 import CrawlerAdmin from './pages/CrawlerAdmin'
 import Report from './pages/Report'
 import Login from './pages/Login'
@@ -34,6 +35,7 @@ function Nav() {
         <Link to="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
         <Link to="/intel" className={pathname === '/intel' ? 'active' : ''}>Intel</Link>
         <Link to="/readiness" className={pathname === '/readiness' ? 'active' : ''}>Readiness</Link>
+        <Link to="/search" className={pathname === '/search' ? 'active' : ''}>Search</Link>
         {authed && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
         {authed && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
@@ -55,6 +57,7 @@ export default function App() {
         <Route path="/intel" element={<Intel />} />
         <Route path="/readiness" element={<Readiness />} />
         <Route path="/willowbot" element={<Willowbot />} />
+        <Route path="/search" element={<SiteSearch />} />
         <Route
           path="/report"
           element={

@@ -6,6 +6,9 @@ import {
     createSitemapsTableQuery,
     addDomainAiReadinessColumnsQuery,
     addPageAiReadinessColumnsQuery,
+    addDomainProfileColumnsQuery,
+    addDomainRootDomainIndexQuery,
+    addPageContentColumnsQuery,
 } from '../utilities/sqlCrawlerQuerys.js';
 import {
     ensureDomain,
@@ -30,6 +33,9 @@ export const initCrawlerTables = async (req, res) => {
         await query(createSitemapsTableQuery);
         await query(addDomainAiReadinessColumnsQuery);
         await query(addPageAiReadinessColumnsQuery);
+        await query(addDomainProfileColumnsQuery);
+        await query(addDomainRootDomainIndexQuery);
+        await query(addPageContentColumnsQuery);
         return res.json({ message: 'Crawler tables ready' });
     } catch (error) {
         console.error('Crawler init error:', error);
