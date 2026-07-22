@@ -78,6 +78,21 @@
     flex: 1;
 }
 
+.crawler-running-badge {
+    font-size: 11px;
+    color: var(--text-dim);
+    word-break: break-word;
+}
+
+.crawler-running-badge--active {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.crawler-running-badge--error {
+    color: #ef4444;
+}
+
 .crawler-textarea {
     background: var(--surface2);
     color: var(--text);
@@ -111,6 +126,7 @@
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 12px;
+    width: 164px;
 }
 
 .crawler-status-section, .crawler-log-section {
