@@ -12,6 +12,15 @@ import {
     getPageReadinessCountsQuery,
     getRecentDomainReadinessQuery,
 } from '../utilities/sqlCrawlerQuerys.js';
+import {
+    getDomainByHostname,
+    getMostRecentCrawledPageForDomain,
+    getDomainAggregatedContacts,
+    getSubdomainCount,
+} from '../crawler/db.js';
+import { maskEmail, maskPhoneNumber } from '../utilities/maskingUtils.js';
+
+const HOSTNAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 
 export const getPublicStats = async (req, res) => {
     try {
@@ -89,6 +98,71 @@ export const getAiReadiness = async (req, res) => {
     } catch (error) {
         console.error('Public AI readiness error:', error);
         return res.status(500).json({ error: 'Failed to fetch AI readiness data' });
+    }
+};
+
+// GET /api/public/site/:hostname — public "search any site" profile lookup.
+// Free view only ever gets masked contact info — full values never leave
+// the server for this route. Searching a domain we haven't crawled does
+// NOT queue it — crawling stays an explicit admin action via /admin/crawler,
+// so this unauthenticated route can't be used to make us crawl arbitrary
+// targets on demand.
+export const getSiteProfile = async (req, res) => {
+    const hostname = (req.params.hostname || '').trim().toLowerCase();
+
+    if (!HOSTNAME_PATTERN.test(hostname)) {
+        return res.status(400).json({ error: 'Invalid hostname' });
+    }
+
+    try {
+        const domain = await getDomainByHostname(hostname);
+
+        if (!domain) {
+            return res.json({ found: false, hostname });
+        }
+
+        const [recentPage, contacts, subdomainCount] = await Promise.all([
+            getMostRecentCrawledPageForDomain(domain.id),
+            getDomainAggregatedContacts(domain.id),
+            getSubdomainCount(domain.root_domain, domain.hostname),
+        ]);
+
+        const emails = contacts.emails || [];
+        const phoneNumbers = contacts.phone_numbers || [];
+
+        return res.json({
+            found: true,
+            hostname: domain.hostname,
+            rootDomain: domain.root_domain,
+            status: domain.status,
+            pagesCrawled: domain.pages_crawled_count,
+            lastUpdatedAt: domain.updated_at,
+            title: recentPage?.title || null,
+            description: recentPage?.meta_description || null,
+            category: domain.category,
+            techStack: domain.tech_stack || [],
+            termsUrl: domain.terms_url,
+            socialLinks: contacts.social_links || [],
+            subdomainCount,
+            aiReadiness: {
+                score: domain.ai_readiness_score,
+                llmsTxtFound: domain.llms_txt_found,
+                aiTxtFound: domain.ai_txt_found,
+                humansTxtFound: domain.humans_txt_found,
+                robotsTxtFound: domain.robots_txt_found,
+                trainingPolicy: domain.ai_training_policy,
+                trainingPolicyExplicit: domain.ai_training_policy_explicit,
+            },
+            contacts: {
+                emailCount: emails.length,
+                phoneCount: phoneNumbers.length,
+                emails: emails.map(maskEmail),
+                phoneNumbers: phoneNumbers.map(maskPhoneNumber),
+            },
+        });
+    } catch (error) {
+        console.error('Site profile error:', error);
+        return res.status(500).json({ error: 'Failed to fetch site profile' });
     }
 };
 

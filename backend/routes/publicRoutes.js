@@ -6,6 +6,7 @@ import {
     getPublicLeaderboard,
     getPublicSitemap,
     getAiReadiness,
+    getSiteProfile,
 } from '../controllers/publicController.js';
 import { trafficLimiter } from '../middleware/rateLimiter.js';
 
@@ -18,6 +19,7 @@ router.get('/recent', getPublicRecentTraps);
 router.get('/intel', getPublicIntel);
 router.get('/leaderboard', getPublicLeaderboard);
 router.get('/ai-readiness', getAiReadiness);
+router.get('/site/:hostname', getSiteProfile);
 router.get('/sitemap.xml', getPublicSitemap);
 
 export default router;

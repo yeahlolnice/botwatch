@@ -1,3 +1,6 @@
+import net from 'node:net';
+import psl from 'psl';
+
 export function parseUrlParts(rawUrl) {
     try {
         const url = new URL(rawUrl);
@@ -45,4 +48,19 @@ export function resolveUrl(rawHref, baseUrl) {
     } catch {
         return null;
     }
+}
+
+// Registrable "root" domain for grouping subdomains — e.g. blog.example.co.uk
+// -> example.co.uk. Uses the public suffix list (via psl) rather than a naive
+// "last 2 labels" split, which gets multi-part TLDs like .co.uk/.com.au wrong.
+export function getRootDomain(hostname) {
+    if (!hostname) return null;
+
+    // IP literals and single-label hosts (localhost, etc.) have no
+    // registrable root — psl.get() on an IP produces nonsense, not null.
+    if (net.isIP(hostname) || !hostname.includes('.')) {
+        return hostname;
+    }
+
+    return psl.get(hostname) || hostname;
 }
