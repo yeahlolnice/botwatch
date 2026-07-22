@@ -24,3 +24,6 @@ node_modules/
 /.cache
 /.parcel-cache
 /.serverless
+
+# Reference copy of the standalone crawler project — not part of the botwatch codebase
+/Willowbot_Web_Crawler

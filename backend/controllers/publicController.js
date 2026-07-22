@@ -7,6 +7,11 @@ import {
     getPublicBotLeaderboardQuery,
     getPublicHoneypotBreakdownQuery,
 } from '../utilities/sqlPublicQuerys.js';
+import {
+    getDomainReadinessCountsQuery,
+    getPageReadinessCountsQuery,
+    getRecentDomainReadinessQuery,
+} from '../utilities/sqlCrawlerQuerys.js';
 
 export const getPublicStats = async (req, res) => {
     try {
@@ -55,6 +60,38 @@ export const getPublicLeaderboard = async (req, res) => {
         return res.status(500).json({ error: 'Failed to fetch leaderboard' });
     }
 };
+// GET /api/public/ai-readiness — how "AI-ready" the crawled slice of the web is
+export const getAiReadiness = async (req, res) => {
+    try {
+        const [domainCounts, pageCounts, recentDomains] = await Promise.all([
+            query(getDomainReadinessCountsQuery),
+            query(getPageReadinessCountsQuery),
+            query(getRecentDomainReadinessQuery),
+        ]);
+
+        const domains = domainCounts.rows[0];
+        const pages = pageCounts.rows[0];
+
+        const domainsChecked = Number(domains.domains_checked) || 0;
+        const domainsWithLlmsTxt = Number(domains.domains_with_llms_txt) || 0;
+        const pagesChecked = Number(pages.pages_checked) || 0;
+        const pagesWithJsonLd = Number(pages.pages_with_json_ld) || 0;
+
+        return res.json({
+            domainsChecked,
+            domainsWithLlmsTxt,
+            pctWithLlmsTxt: domainsChecked > 0 ? Math.round((domainsWithLlmsTxt / domainsChecked) * 100) : 0,
+            pagesChecked,
+            pagesWithJsonLd,
+            pctWithJsonLd: pagesChecked > 0 ? Math.round((pagesWithJsonLd / pagesChecked) * 100) : 0,
+            recentDomains: recentDomains.rows,
+        });
+    } catch (error) {
+        console.error('Public AI readiness error:', error);
+        return res.status(500).json({ error: 'Failed to fetch AI readiness data' });
+    }
+};
+
 // return the sitemap.xml file for search engines
 export const getPublicSitemap = async (req, res) => {
     try {

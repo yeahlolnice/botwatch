@@ -1,0 +1,230 @@
+import { useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '../api.js'
+import './CrawlerAdmin.css'
+
+function StatusTable({ title, rows }) {
+    return (
+        <div className="crawler-status-block">
+            <h4>{title}</h4>
+            {rows?.length > 0 ? (
+                <table className="crawler-status-table">
+                    <tbody>
+                        {rows.map(r => (
+                            <tr key={r.status}>
+                                <td className="crawler-status-label">{r.status}</td>
+                                <td className="crawler-status-count">{r.count}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            ) : <p className="crawler-empty">No data yet</p>}
+        </div>
+    )
+}
+
+export default function CrawlerAdmin() {
+    const [isAdmin, setIsAdmin] = useState(null) // null = loading
+    const [status, setStatus] = useState(null)
+    const [statusLoading, setStatusLoading] = useState(false)
+    const [busy, setBusy] = useState(null) // which action is currently running
+    const [log, setLog] = useState([])
+
+    const [seedInput, setSeedInput] = useState('')
+    const [maxPagesPerDomain, setMaxPagesPerDomain] = useState('')
+    const [maxDomainsThisRun, setMaxDomainsThisRun] = useState('')
+
+    useEffect(() => {
+        fetch('/api/auth/me', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => setIsAdmin(j?.user?.role === 'admin'))
+            .catch(() => setIsAdmin(false))
+    }, [])
+
+    const pushLog = (message) => {
+        setLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString(), message }, ...prev].slice(0, 20))
+    }
+
+    const fetchStatus = useCallback(async () => {
+        setStatusLoading(true)
+        try {
+            const data = await apiFetch('/api/crawler/status')
+            setStatus(data)
+        } catch (e) {
+            pushLog(`Status fetch failed: ${e.message}`)
+        } finally {
+            setStatusLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (isAdmin) fetchStatus()
+    }, [isAdmin, fetchStatus])
+
+    const runAction = async (key, fn, successLabel) => {
+        setBusy(key)
+        try {
+            const result = await fn()
+            pushLog(successLabel(result))
+            await fetchStatus()
+        } catch (e) {
+            pushLog(`${key} failed: ${e.message}`)
+        } finally {
+            setBusy(null)
+        }
+    }
+
+    const handleInit = () => runAction(
+        'init',
+        () => apiFetch('/api/crawler/init', { method: 'POST' }),
+        () => 'Crawler tables ready'
+    )
+
+    const handleSeed = () => {
+        const hostnames = seedInput
+            .split(/[\n,]/)
+            .map(s => s.trim())
+            .filter(Boolean)
+
+        if (hostnames.length === 0) {
+            pushLog('Seed skipped: no hostnames entered')
+            return
+        }
+
+        return runAction(
+            'seed',
+            () => apiFetch('/api/crawler/domains/seed', {
+                method: 'POST',
+                body: JSON.stringify({ hostnames }),
+            }),
+            (result) => result.rejected?.length > 0
+                ? `Seeded ${result.seededCount} domain(s) — rejected as private/internal: ${result.rejected.join(', ')}`
+                : `Seeded ${result.seededCount} domain(s)`
+        )
+    }
+
+    const handleRun = () => {
+        const body = {}
+        if (maxPagesPerDomain) body.maxPagesPerDomain = Number(maxPagesPerDomain)
+        if (maxDomainsThisRun) body.maxDomainsThisRun = Number(maxDomainsThisRun)
+
+        return runAction(
+            'run',
+            () => apiFetch('/api/crawler/run', { method: 'POST', body: JSON.stringify(body) }),
+            (result) => `Crawl run: ${result.domainsProcessed} domain(s) processed (${result.stoppedReason})`
+        )
+    }
+
+    const handleProcessSitemaps = () => runAction(
+        'sitemaps',
+        () => apiFetch('/api/crawler/sitemaps/process', { method: 'POST', body: JSON.stringify({}) }),
+        (result) => `Processed ${result.processedCount} sitemap(s)`
+    )
+
+    if (isAdmin === null) return null
+
+    if (!isAdmin) {
+        return (
+            <main className="crawler-admin-page">
+                <div className="crawler-denied">Admin access required.</div>
+            </main>
+        )
+    }
+
+    const domains = status?.domains
+    const pages = status?.pages
+
+    return (
+        <main className="crawler-admin-page">
+            <div className="crawler-header">
+                <div>
+                    <h1>Crawler Admin</h1>
+                    <p>Trigger and monitor the AI-readiness web crawler.</p>
+                </div>
+                <button className="crawler-btn" onClick={fetchStatus} disabled={statusLoading}>
+                    {statusLoading ? 'Refreshing…' : '↻ Refresh status'}
+                </button>
+            </div>
+
+            <div className="crawler-grid">
+                <div className="crawler-card">
+                    <h3>1. Init tables</h3>
+                    <p className="crawler-card-sub">Create the crawler tables and AI-readiness columns (safe to run repeatedly).</p>
+                    <button className="crawler-btn crawler-btn--primary" onClick={handleInit} disabled={busy !== null}>
+                        {busy === 'init' ? 'Running…' : 'Init tables'}
+                    </button>
+                </div>
+
+                <div className="crawler-card">
+                    <h3>2. Seed domains</h3>
+                    <p className="crawler-card-sub">Hostnames to start crawling from (comma or newline separated). Needed at least once — the crawler only expands from what's already queued.</p>
+                    <textarea
+                        className="crawler-textarea"
+                        placeholder={'example.com\nanother-site.com'}
+                        value={seedInput}
+                        onChange={e => setSeedInput(e.target.value)}
+                        rows={3}
+                    />
+                    <button className="crawler-btn crawler-btn--primary" onClick={handleSeed} disabled={busy !== null}>
+                        {busy === 'seed' ? 'Seeding…' : 'Seed domains'}
+                    </button>
+                </div>
+
+                <div className="crawler-card">
+                    <h3>3. Run crawl batch</h3>
+                    <p className="crawler-card-sub">Crawls queued domains one page at a time, respecting robots.txt and a polite delay between requests.</p>
+                    <div className="crawler-run-inputs">
+                        <label>
+                            Max pages/domain
+                            <input type="number" min="1" placeholder="default" value={maxPagesPerDomain} onChange={e => setMaxPagesPerDomain(e.target.value)} />
+                        </label>
+                        <label>
+                            Max domains this run
+                            <input type="number" min="1" placeholder="default" value={maxDomainsThisRun} onChange={e => setMaxDomainsThisRun(e.target.value)} />
+                        </label>
+                    </div>
+                    <button className="crawler-btn crawler-btn--primary" onClick={handleRun} disabled={busy !== null}>
+                        {busy === 'run' ? 'Crawling…' : 'Run crawl batch'}
+                    </button>
+                </div>
+
+                <div className="crawler-card">
+                    <h3>4. Process queued sitemaps</h3>
+                    <p className="crawler-card-sub">Drains queued sitemaps, importing the page URLs they contain.</p>
+                    <button className="crawler-btn crawler-btn--primary" onClick={handleProcessSitemaps} disabled={busy !== null}>
+                        {busy === 'sitemaps' ? 'Processing…' : 'Process sitemaps'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="crawler-status-section">
+                <h2>Status</h2>
+                <div className="crawler-status-grid">
+                    <StatusTable title="Domains by status" rows={domains?.byStatus} />
+                    <StatusTable title="Pages by status" rows={pages?.byStatus} />
+                    <div className="crawler-status-block">
+                        <h4>AI readiness coverage</h4>
+                        <dl className="crawler-readiness-dl">
+                            <dt>Domains checked for llms.txt</dt><dd>{domains?.readiness?.domains_checked ?? '—'}</dd>
+                            <dt>Domains with llms.txt</dt><dd>{domains?.readiness?.domains_with_llms_txt ?? '—'}</dd>
+                            <dt>Pages checked (crawled)</dt><dd>{pages?.readiness?.pages_checked ?? '—'}</dd>
+                            <dt>Pages with JSON-LD</dt><dd>{pages?.readiness?.pages_with_json_ld ?? '—'}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div className="crawler-log-section">
+                <h2>Activity log</h2>
+                {log.length === 0 ? (
+                    <p className="crawler-empty">No actions yet</p>
+                ) : (
+                    <ul className="crawler-log">
+                        {log.map(entry => (
+                            <li key={entry.id}><span className="crawler-log-time">{entry.time}</span>{entry.message}</li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </main>
+    )
+}
