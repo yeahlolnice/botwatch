@@ -16,12 +16,18 @@ import './App.css'
 function Nav() {
   const { pathname } = useLocation()
   const [user, setUser] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(j => setUser(j?.user || null))
       .catch(() => setUser(null))
+  }, [pathname])
+
+  // Collapse the mobile/tablet menu whenever the route changes.
+  useEffect(() => {
+    setMenuOpen(false)
   }, [pathname])
 
   const authed = !!user
@@ -31,7 +37,15 @@ function Nav() {
   return (
     <nav className="nav">
       <Link to="/" className="nav-brand">botwatch<span>.xyz</span></Link>
-      <div className="nav-links">
+      <button
+        className="nav-toggle"
+        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(o => !o)}
+      >
+        <span></span><span></span><span></span>
+      </button>
+      <div className={`nav-links ${menuOpen ? 'nav-links--open' : ''}`}>
         <Link to="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
         <Link to="/intel" className={pathname === '/intel' ? 'active' : ''}>Intel</Link>
         <Link to="/readiness" className={pathname === '/readiness' ? 'active' : ''}>Readiness</Link>
@@ -40,7 +54,7 @@ function Nav() {
         {authed && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
         {authed
-          ? <button className="nav-signout" onClick={() => fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => setUser(null))}>Sign out</button>
+          ? <button className="nav-signout" onClick={() => { fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => setUser(null)); setMenuOpen(false) }}>Sign out</button>
           : <Link to="/login" className={pathname === '/login' ? 'active' : ''}>Sign in</Link>
         }
       </div>
