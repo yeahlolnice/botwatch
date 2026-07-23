@@ -48,6 +48,7 @@ import {
     markSitemapAsFetchedQuery,
     getQueuedSitemapsQuery,
     getNextQueuedSitemapQuery,
+    getSitemapStatusCountsQuery,
 } from '../utilities/sqlCrawlerQuerys.js';
 
 // --- domains ---
@@ -275,4 +276,9 @@ export async function getQueuedSitemaps() {
 export async function getNextQueuedSitemap() {
     const result = await query(getNextQueuedSitemapQuery);
     return result.rows[0] || null;
+}
+
+export async function getSitemapStatusCounts() {
+    const result = await query(getSitemapStatusCountsQuery);
+    return result.rows;
 }
