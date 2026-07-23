@@ -353,3 +353,7 @@ SELECT * FROM sitemaps WHERE status = 'queued' ORDER BY id ASC;
 export const getNextQueuedSitemapQuery = `
 SELECT * FROM sitemaps WHERE status = 'queued' ORDER BY id ASC LIMIT 1;
 `;
+
+export const getSitemapStatusCountsQuery = `
+SELECT status, COUNT(*)::int AS count FROM sitemaps GROUP BY status;
+`;
