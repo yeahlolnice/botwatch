@@ -241,11 +241,11 @@ export default function CrawlerAdmin() {
                     <div className="crawler-run-inputs">
                         <label>
                             Max pages/domain
-                            <input type="number" min="1" placeholder={defaults ? String(defaults.maxPagesPerDomain) : 'default'} value={maxPagesPerDomain} onChange={e => setMaxPagesPerDomain(e.target.value)} />
+                            <input type="number" min="1" placeholder={defaults ? String(defaults.maxPagesPerDomain) : '5'} value={maxPagesPerDomain} onChange={e => setMaxPagesPerDomain(e.target.value)} />
                         </label>
                         <label>
                             Max domains this run
-                            <input type="number" min="1" placeholder={defaults ? String(defaults.maxDomainsThisRun) : 'default'} value={maxDomainsThisRun} onChange={e => setMaxDomainsThisRun(e.target.value)} />
+                            <input type="number" min="1" placeholder={defaults ? String(defaults.maxDomainsThisRun) : '10'} value={maxDomainsThisRun} onChange={e => setMaxDomainsThisRun(e.target.value)} />
                         </label>
                     </div>
                     {defaults && (
