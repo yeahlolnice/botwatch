@@ -5,7 +5,7 @@ import { checkRobotsForUrl } from './checkRobotsForUrl.js';
 import { isHostnameBlocked } from './ssrfGuard.js';
 import { detectTechStack } from './techStackDetector.js';
 import { classifyCategory } from './categoryClassifier.js';
-import { isSocialHostname } from './socialLinks.js';
+import { extractSocialProfile } from './socialLinks.js';
 import { looksLikeTermsPath } from './termsLinkDetector.js';
 import { recomputeAndStoreDomainScore } from './aiReadinessScore.js';
 import {
@@ -97,7 +97,7 @@ export async function crawlPage(rawUrl) {
     const discoveredDomainsMap = new Map();
     const discoveredPagesMap = new Map();
     const savedLinksMap = new Map();
-    const pageSocialLinks = [];
+    const pageSocialLinks = new Set();
     let termsUrl = null;
 
     for (const rawHref of rawLinks) {
@@ -107,8 +107,14 @@ export async function crawlPage(rawUrl) {
             continue;
         }
 
-        if (isSocialHostname(resolved.hostname)) {
-            pageSocialLinks.push(resolved.fullUrl);
+        // Only record social profiles that live on a *different* host than the
+        // page being crawled — otherwise crawling a social site would harvest
+        // every internal handle it links to as if they were this site's own.
+        if (resolved.hostname !== parsed.hostname) {
+            const socialProfile = extractSocialProfile(resolved.hostname, resolved.path);
+            if (socialProfile) {
+                pageSocialLinks.add(socialProfile);
+            }
         }
 
         // Only trust a Terms & Conditions link that points back at the same
@@ -153,7 +159,7 @@ export async function crawlPage(rawUrl) {
         metaDescription,
         emails: rawEmails,
         phoneNumbers: rawPhoneNumbers,
-        socialLinks: pageSocialLinks,
+        socialLinks: [...pageSocialLinks],
     });
     await updateDomainProfile(domain.id, { category, techStack, termsUrl });
 

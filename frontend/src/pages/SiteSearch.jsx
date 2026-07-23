@@ -18,12 +18,13 @@ function normalizeHostname(input) {
   const trimmed = input.trim().toLowerCase()
   if (!trimmed) return ''
   // Accept a bare hostname or a pasted URL.
+  let host
   try {
-    if (trimmed.includes('://')) return new URL(trimmed).hostname
-    return new URL(`https://${trimmed}`).hostname
+    host = trimmed.includes('://') ? new URL(trimmed).hostname : new URL(`https://${trimmed}`).hostname
   } catch {
-    return trimmed
+    host = trimmed
   }
+  return host.replace(/\.+$/, '') // tolerate a trailing-dot FQDN
 }
 
 function Badge({ ok, label }) {
@@ -53,11 +54,20 @@ export default function SiteSearch() {
 
     try {
       const res = await fetch(`/api/public/site/${encodeURIComponent(hostname)}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        // A malformed hostname (400) is a user-input problem, not a system
+        // failure — say so plainly instead of surfacing a raw HTTP status.
+        if (res.status === 400) {
+          setError(`"${hostname}" doesn't look like a valid domain name — check the spelling and try again.`)
+        } else {
+          setError(data?.error || `Something went wrong (HTTP ${res.status}). Please try again.`)
+        }
+        return
+      }
       setProfile(data)
-    } catch (err) {
-      setError(err.message)
+    } catch {
+      setError('Could not reach the server. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -84,7 +94,7 @@ export default function SiteSearch() {
         </button>
       </form>
 
-      {error && <div className="search-error">Search failed: {error}</div>}
+      {error && <div className="search-error">{error}</div>}
 
       {profile && profile.found === false && (
         <div className="search-empty">

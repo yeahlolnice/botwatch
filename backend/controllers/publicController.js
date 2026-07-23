@@ -108,7 +108,8 @@ export const getAiReadiness = async (req, res) => {
 // so this unauthenticated route can't be used to make us crawl arbitrary
 // targets on demand.
 export const getSiteProfile = async (req, res) => {
-    const hostname = (req.params.hostname || '').trim().toLowerCase();
+    // Strip a trailing-dot FQDN (e.g. "example.com.") so it isn't rejected as malformed.
+    const hostname = (req.params.hostname || '').trim().toLowerCase().replace(/\.+$/, '');
 
     if (!HOSTNAME_PATTERN.test(hostname)) {
         return res.status(400).json({ error: 'Invalid hostname' });
