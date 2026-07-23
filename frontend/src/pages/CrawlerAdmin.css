@@ -93,6 +93,12 @@
     color: #ef4444;
 }
 
+.crawler-defaults-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: -2px 0 0;
+}
+
 .crawler-textarea {
     background: var(--surface2);
     color: var(--text);

@@ -38,6 +38,10 @@ function RunningBadge({ tracker }) {
     return null
 }
 
+function getStatusCount(rows, status) {
+    return rows?.find(r => r.status === status)?.count ?? 0
+}
+
 function summarizeRunResult(kind, result) {
     if (!result) return null
     if (kind === 'crawl') {
@@ -199,6 +203,8 @@ export default function CrawlerAdmin() {
 
     const domains = status?.domains
     const pages = status?.pages
+    const defaults = status?.defaults
+    const queuedSitemaps = getStatusCount(status?.sitemapCounts?.byStatus, 'queued')
 
     return (
         <main className="crawler-admin-page">
@@ -235,13 +241,18 @@ export default function CrawlerAdmin() {
                     <div className="crawler-run-inputs">
                         <label>
                             Max pages/domain
-                            <input type="number" min="1" placeholder="default" value={maxPagesPerDomain} onChange={e => setMaxPagesPerDomain(e.target.value)} />
+                            <input type="number" min="1" placeholder={defaults ? String(defaults.maxPagesPerDomain) : 'default'} value={maxPagesPerDomain} onChange={e => setMaxPagesPerDomain(e.target.value)} />
                         </label>
                         <label>
                             Max domains this run
-                            <input type="number" min="1" placeholder="default" value={maxDomainsThisRun} onChange={e => setMaxDomainsThisRun(e.target.value)} />
+                            <input type="number" min="1" placeholder={defaults ? String(defaults.maxDomainsThisRun) : 'default'} value={maxDomainsThisRun} onChange={e => setMaxDomainsThisRun(e.target.value)} />
                         </label>
                     </div>
+                    {defaults && (
+                        <p className="crawler-defaults-note">
+                            Defaults when left blank: {defaults.maxPagesPerDomain} pages/domain · {defaults.maxDomainsThisRun} domains/run
+                        </p>
+                    )}
                     <button className="crawler-btn crawler-btn--primary" onClick={handleRun} disabled={busy !== null}>
                         {busy === 'run' ? 'Crawling…' : 'Run crawl batch'}
                     </button>
@@ -251,6 +262,10 @@ export default function CrawlerAdmin() {
                 <div className="crawler-card">
                     <h3>3. Process queued sitemaps</h3>
                     <p className="crawler-card-sub">Drains queued sitemaps, importing the page URLs they contain.</p>
+                    <p className="crawler-defaults-note">
+                        {queuedSitemaps} sitemap{queuedSitemaps === 1 ? '' : 's'} queued
+                        {defaults ? ` · processes up to ${defaults.maxSitemapsThisRun} per run` : ''}
+                    </p>
                     <button className="crawler-btn crawler-btn--primary" onClick={handleProcessSitemaps} disabled={busy !== null}>
                         {busy === 'sitemaps' ? 'Processing…' : 'Process sitemaps'}
                     </button>
