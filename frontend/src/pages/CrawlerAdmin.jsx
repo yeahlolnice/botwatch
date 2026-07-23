@@ -62,6 +62,7 @@ export default function CrawlerAdmin() {
     const [maxDomainsThisRun, setMaxDomainsThisRun] = useState('')
 
     const pollIntervalsRef = useRef({})
+    const pollCancelledRef = useRef({})
 
     useEffect(() => {
         fetch('/api/auth/me', { credentials: 'include' })
@@ -92,31 +93,51 @@ export default function CrawlerAdmin() {
     // the server now — poll status until the tracker reports it's done,
     // rather than holding one HTTP request open the whole time (that used
     // to trip the reverse proxy's gateway timeout on longer batches).
+    //
+    // Uses a self-scheduling setTimeout, NOT setInterval: setInterval fires on
+    // a fixed cadence regardless of whether the previous request resolved, so a
+    // slow /status response would pile up overlapping in-flight pings (each
+    // running several DB queries) and effectively self-DDoS. Here the next ping
+    // is only scheduled once the current one has completed.
     const pollUntilDone = useCallback((kind, label) => {
         if (pollIntervalsRef.current[kind]) return // already polling
 
-        const intervalId = setInterval(async () => {
+        pollCancelledRef.current[kind] = false
+
+        const tick = async () => {
             const data = await fetchStatus()
+            if (pollCancelledRef.current[kind]) return // unmounted mid-request
+
             const tracker = data?.[kind]
-            if (!tracker || tracker.running) return
+            if (tracker && !tracker.running) {
+                delete pollIntervalsRef.current[kind]
+                setBusy(null)
 
-            clearInterval(intervalId)
-            delete pollIntervalsRef.current[kind]
-            setBusy(null)
-
-            if (tracker.lastError) {
-                pushLog(`${label} failed: ${tracker.lastError}`)
-            } else {
-                pushLog(summarizeRunResult(kind, tracker.lastResult) || `${label} finished`)
+                if (tracker.lastError) {
+                    pushLog(`${label} failed: ${tracker.lastError}`)
+                } else {
+                    pushLog(summarizeRunResult(kind, tracker.lastResult) || `${label} finished`)
+                }
+                return
             }
-        }, POLL_INTERVAL_MS)
 
-        pollIntervalsRef.current[kind] = intervalId
+            // Still running (or a transient fetch failure) — schedule the next
+            // ping only now that this one has finished, so pings never overlap.
+            pollIntervalsRef.current[kind] = setTimeout(tick, POLL_INTERVAL_MS)
+        }
+
+        pollIntervalsRef.current[kind] = setTimeout(tick, POLL_INTERVAL_MS)
     }, [fetchStatus])
 
     useEffect(() => {
+        // Ref objects are stable for the component's lifetime, so these locals
+        // point at the same maps the poller mutates — reading them at cleanup
+        // reflects the current timers/flags.
+        const timeouts = pollIntervalsRef.current
+        const cancelled = pollCancelledRef.current
         return () => {
-            Object.values(pollIntervalsRef.current).forEach(clearInterval)
+            Object.keys(cancelled).forEach(kind => { cancelled[kind] = true })
+            Object.values(timeouts).forEach(clearTimeout)
         }
     }, [])
 
