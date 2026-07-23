@@ -16,6 +16,7 @@ import {
     getPageStatusCounts,
     getDomainReadinessCounts,
     getPageReadinessCounts,
+    getSitemapStatusCounts,
 } from '../crawler/db.js';
 import { runCrawler } from '../crawler/runCrawler.js';
 import { processNextQueuedSitemap } from '../crawler/processNextQueuedSitemap.js';
@@ -138,18 +139,25 @@ export const processSitemaps = async (req, res) => {
 // GET /api/crawler/status
 export const getCrawlerStatus = async (req, res) => {
     try {
-        const [domainStatus, pageStatus, domainReadiness, pageReadiness] = await Promise.all([
+        const [domainStatus, pageStatus, domainReadiness, pageReadiness, sitemapStatus] = await Promise.all([
             getDomainStatusCounts(),
             getPageStatusCounts(),
             getDomainReadinessCounts(),
             getPageReadinessCounts(),
+            getSitemapStatusCounts(),
         ]);
 
         return res.json({
             domains: { byStatus: domainStatus, readiness: domainReadiness },
             pages: { byStatus: pageStatus, readiness: pageReadiness },
+            sitemapCounts: { byStatus: sitemapStatus },
             crawl: crawlRunTracker.getState(),
             sitemaps: sitemapRunTracker.getState(),
+            defaults: {
+                maxPagesPerDomain: crawlerEnv.crawlerMaxPagesPerDomain,
+                maxDomainsThisRun: crawlerEnv.crawlerMaxDomainsPerRun,
+                maxSitemapsThisRun: crawlerEnv.crawlerMaxSitemapsPerRun,
+            },
         });
     } catch (error) {
         console.error('Crawler status error:', error);
