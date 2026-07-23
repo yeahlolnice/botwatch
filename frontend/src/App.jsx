@@ -7,6 +7,7 @@ import Readiness from './pages/Readiness'
 import Willowbot from './pages/Willowbot'
 import SiteSearch from './pages/SiteSearch'
 import CrawlerAdmin from './pages/CrawlerAdmin'
+import AdminSettings from './pages/AdminSettings'
 import Report from './pages/Report'
 import Login from './pages/Login'
 import Access from './pages/Access'
@@ -53,6 +54,7 @@ function Nav() {
         {authed && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
         {authed && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
+        {isAdmin && <Link to="/admin/settings" className={pathname === '/admin/settings' ? 'active' : ''}>Settings</Link>}
         {authed
           ? <button className="nav-signout" onClick={() => { fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => setUser(null)); setMenuOpen(false) }}>Sign out</button>
           : <Link to="/login" className={pathname === '/login' ? 'active' : ''}>Sign in</Link>
@@ -95,6 +97,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CrawlerAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute>
+              <AdminSettings />
             </ProtectedRoute>
           }
         />

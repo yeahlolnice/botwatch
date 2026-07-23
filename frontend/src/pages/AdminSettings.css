@@ -1,0 +1,113 @@
+.settings-page {
+    padding: 28px 28px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.settings-denied {
+    color: var(--text-dim);
+    font-size: 14px;
+    padding: 40px 0;
+    text-align: center;
+}
+
+.settings-header {
+    margin-bottom: 24px;
+}
+
+.settings-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.settings-header p {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.settings-section {
+    margin-bottom: 28px;
+}
+
+.settings-section h2 {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+.settings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.settings-card h3 {
+    font-size: 14px;
+    color: var(--text);
+}
+
+.settings-card-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+
+.settings-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.settings-btn:hover:not(:disabled) { border-color: var(--accent); }
+.settings-btn:disabled { opacity: 0.5; cursor: default; }
+
+.settings-btn--primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.settings-log-section {
+    margin-bottom: 28px;
+}
+
+.settings-log-section h2 {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+.settings-empty {
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+.settings-log {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.settings-log-time {
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-right: 10px;
+}
