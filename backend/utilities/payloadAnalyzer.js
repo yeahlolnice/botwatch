@@ -46,11 +46,15 @@ const SIGNATURES = [
     { id: 'cmdi_python_rev',  category: 'cmdi',     score: 70, pattern: /python.*socket.*connect/i },
 
     // ── SSRF ──────────────────────────────────────────────────────────────────
-    { id: 'ssrf_localhost',   category: 'ssrf',     score: 40, pattern: /(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)/i },
-    { id: 'ssrf_internal',    category: 'ssrf',     score: 45, pattern: /(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)/ },
-    { id: 'ssrf_metadata_aws',category: 'ssrf',     score: 70, pattern: /169\.254\.169\.254/ },
+    // The numeric IP patterns are anchored with (?<![\d.]) / (?![\d.]) so an IP
+    // only matches as a standalone token — not as a substring of a version
+    // number. Without this, "0.0.0.0" matches the tail of every modern
+    // "Chrome/1xx.0.0.0" User-Agent and flags legitimate visitors as SSRF.
+    { id: 'ssrf_localhost',   category: 'ssrf',     score: 40, pattern: /(localhost|(?<![\d.])127\.0\.0\.1(?![\d.])|(?<![\d.])0\.0\.0\.0(?![\d.])|::1)/i },
+    { id: 'ssrf_internal',    category: 'ssrf',     score: 45, pattern: /(?<![\d.])(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(?![\d.])/ },
+    { id: 'ssrf_metadata_aws',category: 'ssrf',     score: 70, pattern: /(?<![\d.])169\.254\.169\.254(?![\d.])/ },
     { id: 'ssrf_metadata_gcp',category: 'ssrf',     score: 70, pattern: /metadata\.google\.internal|metadata\.goog/i },
-    { id: 'ssrf_metadata_az', category: 'ssrf',     score: 70, pattern: /169\.254\.169\.254|metadata\.azure\.com/i },
+    { id: 'ssrf_metadata_az', category: 'ssrf',     score: 70, pattern: /(?<![\d.])169\.254\.169\.254(?![\d.])|metadata\.azure\.com/i },
     { id: 'ssrf_file',        category: 'ssrf',     score: 55, pattern: /file:\/\/\//i },
     { id: 'ssrf_dict',        category: 'ssrf',     score: 40, pattern: /dict:\/\//i },
     { id: 'ssrf_gopher',      category: 'ssrf',     score: 50, pattern: /gopher:\/\//i },

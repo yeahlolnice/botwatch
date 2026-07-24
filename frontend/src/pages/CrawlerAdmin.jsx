@@ -60,6 +60,7 @@ export default function CrawlerAdmin() {
     const [seedInput, setSeedInput] = useState('')
     const [maxPagesPerDomain, setMaxPagesPerDomain] = useState('')
     const [maxDomainsThisRun, setMaxDomainsThisRun] = useState('')
+    const [maxSitemapsThisRun, setMaxSitemapsThisRun] = useState('')
 
     const pollIntervalsRef = useRef({})
     const pollCancelledRef = useRef({})
@@ -201,9 +202,12 @@ export default function CrawlerAdmin() {
     }
 
     const handleProcessSitemaps = async () => {
+        const body = {}
+        if (maxSitemapsThisRun) body.maxSitemapsThisRun = Number(maxSitemapsThisRun)
+
         setBusy('sitemaps')
         try {
-            await apiFetch('/api/crawler/sitemaps/process', { method: 'POST', body: JSON.stringify({}) })
+            await apiFetch('/api/crawler/sitemaps/process', { method: 'POST', body: JSON.stringify(body) })
             pushLog('Sitemap processing started…')
             pollUntilDone('sitemaps', 'Sitemap processing')
         } catch (e) {
@@ -285,8 +289,14 @@ export default function CrawlerAdmin() {
                     <p className="crawler-card-sub">Drains queued sitemaps, importing the page URLs they contain.</p>
                     <p className="crawler-defaults-note">
                         {queuedSitemaps} sitemap{queuedSitemaps === 1 ? '' : 's'} queued
-                        {defaults ? ` · processes up to ${defaults.maxSitemapsThisRun} per run` : ''}
+                        {defaults ? ` · defaults to ${defaults.maxSitemapsThisRun} per run` : ''}
                     </p>
+                    <div className="crawler-run-inputs">
+                        <label>
+                            Sitemaps this run
+                            <input type="number" min="1" max="5000" placeholder={defaults ? String(defaults.maxSitemapsThisRun) : '20'} value={maxSitemapsThisRun} onChange={e => setMaxSitemapsThisRun(e.target.value)} />
+                        </label>
+                    </div>
                     <button className="crawler-btn crawler-btn--primary" onClick={handleProcessSitemaps} disabled={busy !== null}>
                         {busy === 'sitemaps' ? 'Processing…' : 'Process sitemaps'}
                     </button>
