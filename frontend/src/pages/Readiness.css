@@ -26,6 +26,29 @@
   max-width: 560px;
 }
 
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #2a2a38; 
+  border-radius: 5px;
+  margin-left: 10px;
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #eab308;
+}
+
 .readiness-pulse {
   display: flex;
   align-items: center;
@@ -117,6 +140,7 @@
 .readiness-table {
   max-height: 420px;
   overflow-y: auto;
+  padding-right: 20px;
 }
 
 .readiness-table-head {
