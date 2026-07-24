@@ -404,3 +404,25 @@
     white-space: pre-wrap;
     word-break: break-all;
 }
+
+/* for tablet and mobile screens */
+
+@media (max-width: 768px) {
+    .report-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .candidate-row {
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 0;
+        display: grid;
+        grid-template-rows: 1fr 1fr;
+    }
+
+    .candidate-abuse {
+        min-width: 0;
+        align-items: flex-start;
+    }
+}    
