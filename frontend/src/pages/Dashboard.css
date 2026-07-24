@@ -21,6 +21,13 @@
     margin: 5px 10px;
 }
 
+.abuse-report-item {
+    background: #ffffff20;
+    border-radius: 10px;
+    padding: 5px 15px;
+    margin-bottom: 10px;
+}
+
 .dash-header {
     display: flex;
     align-items: flex-start;
