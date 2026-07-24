@@ -46,6 +46,7 @@ import {
     getAllSitemapsQuery,
     getSitemapByIdQuery,
     markSitemapAsFetchedQuery,
+    markSitemapAsErrorQuery,
     getQueuedSitemapsQuery,
     getNextQueuedSitemapQuery,
     getSitemapStatusCountsQuery,
@@ -265,6 +266,11 @@ export async function getSitemapById(id) {
 
 export async function markSitemapAsFetched(sitemapId) {
     const result = await query(markSitemapAsFetchedQuery, [sitemapId]);
+    return result.rows[0] || null;
+}
+
+export async function markSitemapAsError(sitemapId) {
+    const result = await query(markSitemapAsErrorQuery, [sitemapId]);
     return result.rows[0] || null;
 }
 
