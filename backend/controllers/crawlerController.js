@@ -112,7 +112,10 @@ export const processSitemaps = async (req, res) => {
         return res.status(409).json({ error: 'Sitemap processing is already running' });
     }
 
-    const maxSitemapsThisRun = Number(req.body?.maxSitemapsThisRun) || crawlerEnv.crawlerMaxSitemapsPerRun;
+    // Admin can raise this per-run (the default stays modest), but clamp to a
+    // sane ceiling so a typo can't queue an unbounded background job.
+    const requestedSitemaps = Number(req.body?.maxSitemapsThisRun) || crawlerEnv.crawlerMaxSitemapsPerRun;
+    const maxSitemapsThisRun = Math.min(Math.max(1, Math.floor(requestedSitemaps)), 5000);
 
     sitemapRunTracker.start();
     res.status(202).json({ started: true, maxSitemapsThisRun });
