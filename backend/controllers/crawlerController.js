@@ -139,6 +139,16 @@ export const processSitemaps = async (req, res) => {
         });
 };
 
+// The run trackers hold the FULL run result — every domain, page and link
+// crawled — which is enormous for a large batch (100 domains x 5 pages). The
+// status endpoint is polled continuously, so send only the handful of summary
+// fields the UI actually reads and drop the heavy nested arrays.
+const summariseRunState = (state) => {
+    if (!state?.lastResult) return state;
+    const { ok, stoppedReason, domainsProcessed, processedCount } = state.lastResult;
+    return { ...state, lastResult: { ok, stoppedReason, domainsProcessed, processedCount } };
+};
+
 // GET /api/crawler/status
 export const getCrawlerStatus = async (req, res) => {
     try {
@@ -154,8 +164,8 @@ export const getCrawlerStatus = async (req, res) => {
             domains: { byStatus: domainStatus, readiness: domainReadiness },
             pages: { byStatus: pageStatus, readiness: pageReadiness },
             sitemapCounts: { byStatus: sitemapStatus },
-            crawl: crawlRunTracker.getState(),
-            sitemaps: sitemapRunTracker.getState(),
+            crawl: summariseRunState(crawlRunTracker.getState()),
+            sitemaps: summariseRunState(sitemapRunTracker.getState()),
             defaults: {
                 maxPagesPerDomain: crawlerEnv.crawlerMaxPagesPerDomain,
                 maxDomainsThisRun: crawlerEnv.crawlerMaxDomainsPerRun,
