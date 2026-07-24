@@ -246,6 +246,20 @@ function RequestDetail({ request, onClose }) {
                     </div>
                 )}
 
+                {request.raw_body && (
+                    <div className="detail-section">
+                        <h4>Raw Body{request.raw_body_bytes != null ? ` — ${request.raw_body_bytes} bytes${request.raw_body_truncated ? ' (truncated)' : ''}` : ''}</h4>
+                        <pre className="detail-pre">{request.raw_body}</pre>
+                    </div>
+                )}
+
+                {request.body != null && (
+                    <div className="detail-section">
+                        <h4>Parsed Body</h4>
+                        <pre className="detail-pre">{typeof request.body === 'string' ? request.body : JSON.stringify(request.body, null, 2)}</pre>
+                    </div>
+                )}
+
                 <AbuseIpPanel ip={ip} />
             </div>
         </div>

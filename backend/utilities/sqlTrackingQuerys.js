@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS request_tracking (
     headers JSONB,
     cookies JSONB,
     body JSONB,
+    raw_body TEXT,
+    raw_body_bytes INT,
+    raw_body_truncated BOOLEAN,
 
     session_id TEXT,
     visitor_id TEXT,
@@ -60,7 +63,10 @@ CREATE TABLE IF NOT EXISTS request_tracking (
 // Run after CREATE TABLE to add threat_signals to existing installations
 export const migrateTrackingTableQuery = `
 ALTER TABLE request_tracking
-    ADD COLUMN IF NOT EXISTS threat_signals JSONB;
+    ADD COLUMN IF NOT EXISTS threat_signals JSONB,
+    ADD COLUMN IF NOT EXISTS raw_body TEXT,
+    ADD COLUMN IF NOT EXISTS raw_body_bytes INT,
+    ADD COLUMN IF NOT EXISTS raw_body_truncated BOOLEAN;
 `;
 
 export const insertRequestQuery = `
@@ -70,6 +76,7 @@ INSERT INTO request_tracking (
     ip_address, x_forwarded_for, cf_connecting_ip, real_ip,
     user_agent, referrer,
     headers, cookies, body,
+    raw_body, raw_body_bytes, raw_body_truncated,
     session_id, visitor_id,
     accept_language, accept_encoding, sec_ch_ua, sec_fetch_site, sec_fetch_mode, sec_fetch_dest,
     is_trap, trap_type, bot_score, bot_label, crawler_type,
@@ -82,12 +89,13 @@ INSERT INTO request_tracking (
     $7, $8, $9, $10,
     $11, $12,
     $13, $14, $15,
-    $16, $17,
-    $18, $19, $20, $21, $22, $23,
-    $24, $25, $26, $27, $28,
-    $29,
-    $30, $31, $32, $33,
-    $34, $35, $36, $37, $38
+    $16, $17, $18,
+    $19, $20,
+    $21, $22, $23, $24, $25, $26,
+    $27, $28, $29, $30, $31,
+    $32,
+    $33, $34, $35, $36,
+    $37, $38, $39, $40, $41
 )`;
 
 export const getRecentRequestsQuery = `
@@ -100,6 +108,7 @@ SELECT
     bot_label, crawler_type, bot_score,
     is_trap, trap_type,
     threat_signals,
+    body, raw_body, raw_body_bytes, raw_body_truncated,
     accept_language, sec_fetch_site, sec_fetch_mode
 FROM request_tracking
 ORDER BY timestamp DESC
