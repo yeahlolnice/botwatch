@@ -120,8 +120,15 @@ function buildTargets(req) {
         targets.push({ source: `header.${key}`, value: String(val) });
     }
 
-    // Body (stringify objects, pass strings directly)
-    if (req.body) {
+    // Raw body — the verbatim bytes captured for every content type. This is
+    // where payloads sent on odd/unparsed content types show up.
+    if (req.rawBody) {
+        targets.push({ source: 'raw_body', value: req.rawBody });
+    }
+
+    // Parsed body (JSON/form/text). Skip raw Buffers — raw_body already covers
+    // those, and JSON.stringify on a Buffer produces useless noise.
+    if (req.body && !Buffer.isBuffer(req.body)) {
         const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
         targets.push({ source: 'body', value: bodyStr });
         // Also inspect individual body fields if it's an object

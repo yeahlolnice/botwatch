@@ -32,9 +32,26 @@ const frontendDist = join(__dirname, '../frontend/dist');
 
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN || false, credentials: true }));
 app.use(cookieParser());
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
-app.use(bodyParser.text({ type: ['text/xml', 'application/xml'], limit: '10mb' }));
+// Capture the verbatim raw body for EVERY request, regardless of content type,
+// so unparsed/odd payloads (where novel exploits hide) are recorded exactly as
+// sent. Security-first: capped so we never persist an unbounded blob, but kept
+// large enough to see the full attack. body-parser hands verify() the raw
+// buffer before parsing, without disturbing normal body parsing.
+const RAW_BODY_MAX_BYTES = Number(process.env.RAW_BODY_MAX_BYTES) || 64 * 1024;
+const captureRawBody = (req, res, buf) => {
+    if (!buf || !buf.length) return;
+    req.rawBody = buf.subarray(0, RAW_BODY_MAX_BYTES).toString('utf8');
+    req.rawBodyBytes = buf.length;
+    req.rawBodyTruncated = buf.length > RAW_BODY_MAX_BYTES;
+};
+
+app.use(bodyParser.json({ limit: '10mb', verify: captureRawBody }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb', verify: captureRawBody }));
+app.use(bodyParser.text({ type: ['text/xml', 'application/xml'], limit: '10mb', verify: captureRawBody }));
+// Catch-all so any content type the parsers above didn't handle is still read
+// (as a raw Buffer) purely to trigger the verify hook. req.body is a Buffer for
+// those requests; downstream code guards against that.
+app.use(bodyParser.raw({ type: () => true, limit: '10mb', verify: captureRawBody }));
 
 // Global rate limiter — applied to all routes
 app.use(globalLimiter);

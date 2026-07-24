@@ -89,6 +89,20 @@ const trackRequest = (req, res, next) => {
             // Store ALL headers including authorization — raw forensic value
             const allHeaders = { ...headers };
 
+            // Parsed body only when it's a JSON/form object or a string — never a
+            // raw Buffer (unparsed content types arrive as a Buffer and are
+            // captured verbatim in raw_body instead).
+            const parsedBody = body && !Buffer.isBuffer(body)
+                && (typeof body === 'string' ? body.length : Object.keys(body).length)
+                ? JSON.stringify(body) : null;
+
+            // Verbatim raw body — captured in server.js for EVERY content type,
+            // capped and flagged there. This is the ground truth of exactly what
+            // was sent, which is where novel/odd exploit payloads show up.
+            const rawBody = req.rawBody || null;
+            const rawBodyBytes = req.rawBodyBytes ?? null;
+            const rawBodyTruncated = req.rawBodyTruncated ?? false;
+
             await query(insertRequestQuery, [
                 method, path, fullUrl,
                 Object.keys(queryParams).length ? JSON.stringify(queryParams) : null,
@@ -97,7 +111,8 @@ const trackRequest = (req, res, next) => {
                 userAgent, referrer,
                 JSON.stringify(allHeaders),
                 cookieHeader ? JSON.stringify({ raw: cookieHeader }) : null,
-                body && Object.keys(body).length ? JSON.stringify(body) : null,
+                parsedBody,
+                rawBody, rawBodyBytes, rawBodyTruncated,
                 sessionId, visitorId,
                 acceptLanguage, acceptEncoding, secChUa, secFetchSite, secFetchMode, secFetchDest,
                 isTrap, trapType, threatScore, botLabel, crawlerType,
