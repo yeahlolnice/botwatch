@@ -343,6 +343,9 @@ SELECT * FROM sitemaps WHERE id = $1 LIMIT 1;
 export const markSitemapAsFetchedQuery = `
 UPDATE sitemaps SET status = 'fetched', fetched_at = NOW() WHERE id = $1 RETURNING *;
 `;
+export const markSitemapAsErrorQuery = `
+UPDATE sitemaps SET status = 'error', fetched_at = NOW() WHERE id = $1 RETURNING *;
+`;
 
 export const getQueuedSitemapsQuery = `
 SELECT * FROM sitemaps WHERE status = 'queued' ORDER BY id ASC;
