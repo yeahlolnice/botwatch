@@ -29,6 +29,7 @@ app.set('trust proxy', true);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDist = join(__dirname, '../frontend/dist');
+const publicDir = join(__dirname, 'public');
 
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN || false, credentials: true }));
 app.use(cookieParser());
@@ -44,6 +45,21 @@ app.use(trackRequest);
 
 // Honeypot routes — before static files so .env etc. are intercepted
 app.use(honeypotRoutes);
+
+// Static content pages — real server-rendered HTML (not the React SPA) so that
+// simple, non-JS crawlers can actually read the content. Discoverable via
+// sitemap.xml and llms.txt; intentionally not linked from the app UI. The
+// { extensions: ['html'] } option serves /blog/foo from blog/foo.html.
+app.use('/blog', express.static(join(publicDir, 'blog'), { extensions: ['html'] }));
+app.get('/llms.txt', (req, res) => {
+    res.type('text/plain').sendFile(join(publicDir, 'llms.txt'));
+});
+// Serve the sitemap at the root, where crawlers (and our own robots.txt) expect
+// it. The existing /api/public/sitemap.xml handler resolves the file with an
+// unsafe relative path and 403s, so this is the working entry point.
+app.get('/sitemap.xml', (req, res) => {
+    res.type('application/xml').sendFile(join(__dirname, 'sitemap.xml'));
+});
 
 // Serve React build — after honeypots so trap paths are never short-circuited
 if (existsSync(frontendDist)) {
