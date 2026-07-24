@@ -59,11 +59,23 @@ export default function Willowbot() {
 
       <section className="wb-section">
         <h2 className="section-title">What it checks</h2>
-        <p className="section-sub">Two simple, publicly visible signals — nothing intrusive</p>
+        <p className="section-sub">Simple, publicly visible signals — nothing intrusive</p>
         <div className="wb-checks">
           <div className="wb-check-card">
             <h3>llms.txt</h3>
             <p>A proposed convention (like robots.txt or sitemap.xml) for pointing AI agents at a site's own canonical, LLM-friendly documentation. Willowbot checks whether a domain publishes one.</p>
+          </div>
+          <div className="wb-check-card">
+            <h3>ai.txt</h3>
+            <p>An emerging file for declaring how a site's content may be used by AI systems. Willowbot records whether one is present.</p>
+          </div>
+          <div className="wb-check-card">
+            <h3>humans.txt</h3>
+            <p>The long-standing convention for crediting the people behind a site. Willowbot notes whether a domain publishes one.</p>
+          </div>
+          <div className="wb-check-card">
+            <h3>robots.txt &amp; AI-crawler rules</h3>
+            <p>Beyond obeying it, Willowbot records whether a site has a robots.txt and whether it declares explicit rules for known AI-training crawlers — a signal of how the site is responding to AI.</p>
           </div>
           <div className="wb-check-card">
             <h3>JSON-LD structured data</h3>
