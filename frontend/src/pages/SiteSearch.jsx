@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import './SiteSearch.css'
 
 function fmt(n) {
@@ -41,10 +41,10 @@ export default function SiteSearch() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [searchParams] = useSearchParams()
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
-    const hostname = normalizeHostname(input)
+  const runSearch = useCallback(async (rawInput) => {
+    const hostname = normalizeHostname(rawInput)
     if (!hostname) return
 
     setLoading(true)
@@ -71,7 +71,22 @@ export default function SiteSearch() {
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    runSearch(input)
   }
+
+  // Deep link: /search?host=example.com pre-fills and runs the lookup, so the
+  // readiness page's recent list can link straight to a site's profile.
+  useEffect(() => {
+    const host = searchParams.get('host')
+    if (host) {
+      setInput(host)
+      runSearch(host)
+    }
+  }, [searchParams, runSearch])
 
   const readiness = profile?.aiReadiness
 

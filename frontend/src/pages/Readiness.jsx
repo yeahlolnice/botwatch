@@ -72,7 +72,7 @@ export default function Readiness() {
             </div>
             {readiness.recentDomains.map(d => (
               <div key={d.hostname} className="readiness-row">
-                <span className="readiness-domain">{d.hostname}</span>
+                <Link to={`/search?host=${encodeURIComponent(d.hostname)}`} className="readiness-domain readiness-domain-link">{d.hostname}</Link>
                 <span className={d.llms_txt_found ? 'readiness-yes' : 'readiness-no'}>
                   {d.llms_txt_found ? '✓ Found' : '— Not found'}
                 </span>
