@@ -10,6 +10,7 @@ import {
     getAllDomainsQuery,
     getDomainByHostnameQuery,
     getNextQueuedDomainQuery,
+    prioritizeDomainQuery,
     markDomainAsCrawlingQuery,
     markDomainAsDoneQuery,
     markDomainAsErrorQuery,
@@ -71,6 +72,11 @@ export async function getDomainByHostname(hostname) {
 
 export async function getNextQueuedDomain() {
     const result = await query(getNextQueuedDomainQuery);
+    return result.rows[0] || null;
+}
+
+export async function prioritizeDomain(hostname) {
+    const result = await query(prioritizeDomainQuery, [hostname]);
     return result.rows[0] || null;
 }
 

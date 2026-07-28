@@ -112,7 +112,23 @@ SELECT * FROM domains WHERE hostname = $1 LIMIT 1;
 `;
 
 export const getNextQueuedDomainQuery = `
-SELECT * FROM domains WHERE status = 'queued' ORDER BY id ASC LIMIT 1;
+SELECT * FROM domains WHERE status = 'queued' ORDER BY priority DESC, id ASC LIMIT 1;
+`;
+
+// Admin "jump to front of queue": bump the domain above everything else and
+// re-queue it so the next crawl batch picks it up first. priority is a simple
+// high-water mark — each call lands the domain ahead of all prior ones.
+export const addDomainPriorityColumnQuery = `
+ALTER TABLE domains ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 0;
+`;
+
+export const prioritizeDomainQuery = `
+UPDATE domains
+SET priority = (SELECT COALESCE(MAX(priority), 0) + 1 FROM domains),
+    status = 'queued',
+    updated_at = NOW()
+WHERE hostname = $1
+RETURNING *;
 `;
 
 export const markDomainAsCrawlingQuery = `
