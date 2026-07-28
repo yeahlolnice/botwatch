@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../api.js'
 import './ModelAdmin.css'
 
@@ -126,7 +127,9 @@ export default function ModelAdmin() {
               <tbody>
                 {scores.map((s) => (
                   <tr key={s.ip}>
-                    <td className="model-ip">{s.ip}</td>
+                    <td className="model-ip">
+                      <Link to={`/dashboard?search=${encodeURIComponent(s.ip)}`} className="model-ip-link" title="Review this IP's requests">{s.ip}</Link>
+                    </td>
                     <td><span className={`model-score ${scoreClass(s.score)}`}>{s.score}</span></td>
                     <td className="model-num">{s.request_count ?? '—'}</td>
                     <td className="model-why">{s.explanation || '—'}</td>

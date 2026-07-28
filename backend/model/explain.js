@@ -2,12 +2,15 @@
 // Deterministic and template-based — no dependency, safe to run on every score.
 // The `pos` phrase describes an above-average value, `neg` a below-average one;
 // the explainer picks based on each driver's scaled value (z).
+// Phrases describe the pattern relative to typical traffic. Kept checkable:
+// e.g. a low User-Agent-diversity ratio means UAs are REUSED across many
+// requests (not literally one), which is what a reviewer will actually see.
 const PHRASES = {
-    request_count_log: { pos: 'a high volume of requests', neg: 'very few requests' },
-    path_diversity: { pos: 'requests spread across many paths', neg: 'repeated hits on a small set of paths' },
-    ua_diversity: { pos: 'many rotating User-Agents', neg: 'a single consistent User-Agent' },
-    ua_missing_ratio: { pos: 'frequently missing a User-Agent', neg: 'a consistently present User-Agent' },
-    error_ratio: { pos: 'many error responses (probing)', neg: 'mostly successful responses' },
+    request_count_log: { pos: 'a high volume of requests', neg: 'only a handful of requests' },
+    path_diversity: { pos: 'requests spread across many different paths', neg: 'repeated hits on a small set of paths' },
+    ua_diversity: { pos: 'a frequently changing User-Agent', neg: 'the same few User-Agents reused across many requests' },
+    ua_missing_ratio: { pos: 'often no User-Agent at all', neg: 'a User-Agent present on most requests' },
+    error_ratio: { pos: 'a high rate of error responses (probing)', neg: 'mostly successful responses' },
     non_get_ratio: { pos: 'a high share of non-GET requests', neg: 'almost entirely GET requests' },
     with_body_ratio: { pos: 'frequent request bodies (payloads)', neg: 'rarely any request body' },
     method_diversity: { pos: 'a wide mix of HTTP methods', neg: 'a single HTTP method' },

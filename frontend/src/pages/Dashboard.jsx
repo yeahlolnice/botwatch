@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../api.js'
 import './Dashboard.css'
 
@@ -272,8 +273,12 @@ export default function Dashboard() {
     const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    const [search, setSearch] = useState('')
-    const [debouncedSearch, setDebouncedSearch] = useState('')
+    // Deep link: /dashboard?search=<ip> pre-filters the request list (e.g. from
+    // the Model panel's "View requests" link) so you can review one IP's traffic.
+    const [searchParams] = useSearchParams()
+    const initialSearch = searchParams.get('search') || ''
+    const [search, setSearch] = useState(initialSearch)
+    const [debouncedSearch, setDebouncedSearch] = useState(initialSearch)
     const [methodFilter, setMethodFilter] = useState('ALL')
     const [threatFilter, setThreatFilter] = useState(false)
     const [trapFilter, setTrapFilter] = useState(false)

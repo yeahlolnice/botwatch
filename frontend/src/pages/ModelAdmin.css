@@ -80,6 +80,8 @@
 .model-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
 .model-table tr:last-child td { border-bottom: none; }
 .model-ip { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+.model-ip-link { color: var(--accent, #2fbfae); text-decoration: none; }
+.model-ip-link:hover { text-decoration: underline; }
 .model-num { font-family: var(--mono); color: var(--text-dim); }
 .model-why { color: var(--text-dim); font-size: 12.5px; max-width: 42ch; }
 
