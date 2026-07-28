@@ -19,6 +19,7 @@ import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
 import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
+import { runMigrations } from './utilities/runMigrations.js';
 
 dotenv.config();
 
@@ -119,6 +120,10 @@ app.use((err, req, res, next) => {
     res.status(err.statusCode || 500).json({ error: err.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Botwatch Server running on port ${PORT}`);
+    // Bring the schema up to date on every boot (all statements idempotent), so
+    // a deploy is just "pull + restart" and a forgotten migration can't silently
+    // break tracking again.
+    await runMigrations();
 });

@@ -1,0 +1,63 @@
+import { query } from './connectDB.js';
+import {
+    createRequestTrackingTableQuery,
+    migrateTrackingTableQuery,
+} from './sqlTrackingQuerys.js';
+import {
+    createDomainsTableQuery,
+    createPagesTableQuery,
+    createLinksTableQuery,
+    createSitemapsTableQuery,
+    addDomainAiReadinessColumnsQuery,
+    addPageAiReadinessColumnsQuery,
+    addDomainProfileColumnsQuery,
+    addDomainRootDomainIndexQuery,
+    addPageContentColumnsQuery,
+    addDomainPriorityColumnQuery,
+} from './sqlCrawlerQuerys.js';
+import { createEnrichmentTableQuery } from './sqlEnrichmentQuerys.js';
+import {
+    createDomainEnrichmentTableQuery,
+    createDomainEnrichmentIndexQuery,
+} from './sqlDomainEnrichmentQuerys.js';
+
+// Every schema statement is idempotent (CREATE TABLE / ADD COLUMN / CREATE INDEX
+// IF NOT EXISTS), so it's safe to run them on every boot. This is what makes a
+// deploy just "pull + restart": the schema is always brought up to date, and we
+// never again silently drop data because someone forgot to hit an init endpoint.
+const MIGRATIONS = [
+    ['request_tracking table', createRequestTrackingTableQuery],
+    ['request_tracking columns', migrateTrackingTableQuery],
+    ['domains table', createDomainsTableQuery],
+    ['pages table', createPagesTableQuery],
+    ['links table', createLinksTableQuery],
+    ['sitemaps table', createSitemapsTableQuery],
+    ['domain ai-readiness columns', addDomainAiReadinessColumnsQuery],
+    ['page ai-readiness columns', addPageAiReadinessColumnsQuery],
+    ['domain profile columns', addDomainProfileColumnsQuery],
+    ['domain root_domain index', addDomainRootDomainIndexQuery],
+    ['page content columns', addPageContentColumnsQuery],
+    ['domain priority column', addDomainPriorityColumnQuery],
+    ['ip_enrichment table', createEnrichmentTableQuery],
+    ['ip_enrichment abuse_reports', 'ALTER TABLE ip_enrichment ADD COLUMN IF NOT EXISTS abuse_reports JSONB'],
+    ['domain_enrichment table', createDomainEnrichmentTableQuery],
+    ['domain_enrichment index', createDomainEnrichmentIndexQuery],
+];
+
+// Runs all migrations, isolating each so one failure never stops the rest and
+// never crashes the server. Returns a summary for logging.
+export async function runMigrations() {
+    let ok = 0;
+    const failures = [];
+    for (const [name, sql] of MIGRATIONS) {
+        try {
+            await query(sql);
+            ok++;
+        } catch (error) {
+            failures.push(name);
+            console.error(`[migrate] "${name}" failed: ${error.message}`);
+        }
+    }
+    console.log(`[migrate] ${ok}/${MIGRATIONS.length} migrations ok${failures.length ? ` — failed: ${failures.join(', ')}` : ''}`);
+    return { ok, failed: failures.length };
+}
