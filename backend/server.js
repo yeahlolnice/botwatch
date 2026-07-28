@@ -14,6 +14,7 @@ import authRoutes from './routes/authRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import enrichmentRoutes from './routes/enrichmentRoutes.js';
 import crawlerRoutes from './routes/crawlerRoutes.js';
+import modelRoutes from './routes/modelRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
@@ -98,6 +99,7 @@ app.use('/api/users', requireAdmin, userRoutes);
 app.use('/api/traffic', trafficLimiter, trackingRoutes);
 app.use('/api/enrich', requireAdmin, enrichmentRoutes);
 app.use('/api/crawler', requireAdmin, crawlerRoutes);
+app.use('/api/model', requireAdmin, modelRoutes);
 
 // 404 for unmatched API routes
 app.use('/api', (req, res) => {
