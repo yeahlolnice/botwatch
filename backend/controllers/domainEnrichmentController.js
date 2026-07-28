@@ -28,11 +28,11 @@ export const enrichDomainNow = async (req, res) => {
             jsonb(snapshot.dns),
             jsonb(snapshot.whois),
             jsonb(snapshot.emailPosture),
-            null, // tls — future increment
-            null, // security_headers — future increment
-            null, // hosting — future increment
-            null, // reputation — future increment
-            null, // subdomains — future increment
+            jsonb(snapshot.tls),
+            jsonb(snapshot.securityHeaders),
+            jsonb(snapshot.hosting),
+            jsonb(snapshot.reputation),
+            jsonb(snapshot.subdomains),
         ]);
 
         return res.json({
