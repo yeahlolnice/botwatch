@@ -54,6 +54,14 @@ export default function ModelAdmin() {
     finally { setBusy(null) }
   }
 
+  const handleVerdict = async (ip, verdict) => {
+    try {
+      await apiFetch('/api/model/verdict', { method: 'POST', body: JSON.stringify({ ip, verdict }) })
+      pushLog(`${ip}: ${verdict === 'clear' ? 'review cleared' : verdict === 'malicious' ? 'confirmed malicious' : 'marked false positive'}`)
+      await loadScores()
+    } catch (e) { pushLog(`Verdict failed: ${e.message}`) }
+  }
+
   const test = metrics?.metrics?.test
 
   return (
@@ -90,6 +98,15 @@ export default function ModelAdmin() {
             {busy === 'score' ? 'Scoring…' : 'Score all IPs'}
           </button>
         </div>
+
+        <div className="model-card">
+          <h3>3. Threat feed</h3>
+          <p className="model-card-sub">Export the scored high-risk IPs (score ≥ 70) as a feed.</p>
+          <div className="model-feed-links">
+            <a className="model-btn" href="/api/model/feed?format=csv&minScore=70">Download CSV</a>
+            <a className="model-btn" href="/api/model/feed?format=json&minScore=70" target="_blank" rel="noopener noreferrer">View JSON</a>
+          </div>
+        </div>
       </div>
 
       {log.length > 0 && (
@@ -104,7 +121,7 @@ export default function ModelAdmin() {
           <div className="model-table-wrap">
             <table className="model-table">
               <thead>
-                <tr><th>IP</th><th>Score</th><th>Requests</th><th>Why</th></tr>
+                <tr><th>IP</th><th>Score</th><th>Requests</th><th>Why</th><th>Review</th></tr>
               </thead>
               <tbody>
                 {scores.map((s) => (
@@ -113,6 +130,18 @@ export default function ModelAdmin() {
                     <td><span className={`model-score ${scoreClass(s.score)}`}>{s.score}</span></td>
                     <td className="model-num">{s.request_count ?? '—'}</td>
                     <td className="model-why">{s.explanation || '—'}</td>
+                    <td className="model-verdict">
+                      <button
+                        title="Confirm malicious"
+                        className={`model-vbtn${s.verdict === 'malicious' ? ' model-vbtn--mal' : ''}`}
+                        onClick={() => handleVerdict(s.ip, s.verdict === 'malicious' ? 'clear' : 'malicious')}
+                      >✓</button>
+                      <button
+                        title="False positive"
+                        className={`model-vbtn${s.verdict === 'benign' ? ' model-vbtn--ben' : ''}`}
+                        onClick={() => handleVerdict(s.ip, s.verdict === 'benign' ? 'clear' : 'benign')}
+                      >✗</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
