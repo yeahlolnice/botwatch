@@ -1,6 +1,7 @@
 import { query } from '../utilities/connectDB.js';
 import { extractIpFeatureRows, FEATURE_NAMES } from '../model/featureExtraction.js';
 import { trainModel, scoreFeatures } from '../model/logisticRegression.js';
+import { explainScore } from '../model/explain.js';
 import {
     upsertModelQuery,
     getModelQuery,
@@ -67,8 +68,9 @@ export const scoreAllIps = async (req, res) => {
         for (const r of rows) {
             const { score, factors } = scoreFeatures(model, r.features);
             if (score >= 70) high++;
+            const explanation = explainScore(score, factors);
             const topFactors = factors.slice(0, 3).map((f) => ({ feature: f.feature, impact: Math.round(f.impact * 1000) / 1000 }));
-            await query(upsertIpScoreQuery, [r.ip, score, r.label, r.requestCount, JSON.stringify(topFactors)]);
+            await query(upsertIpScoreQuery, [r.ip, score, r.label, r.requestCount, JSON.stringify(topFactors), explanation]);
         }
 
         return res.json({ scored: rows.length, highRisk: high });
