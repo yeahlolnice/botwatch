@@ -55,9 +55,30 @@ export function labelRow(a) {
         ? 1 : 0;
 }
 
-// Ordered numeric vector for a features object — the model's actual input.
+// Ordered numeric vector for a features object — the full 13-feature view.
 export function featureVector(features) {
     return FEATURE_NAMES.map((name) => features[name] ?? 0);
+}
+
+// The features the MODEL trains on. Deliberately excludes the signals that
+// DEFINE the label (trap_ratio, threat_ratio, *_bot_score_norm) — feeding those
+// in would just let the model re-derive the label (leakage). These behavioural
+// features let it flag IPs that *look* malicious before they ever trip a
+// honeypot or a payload signature — which is the whole point of a predictor.
+export const MODEL_FEATURES = [
+    'request_count_log',
+    'path_diversity',
+    'ua_diversity',
+    'ua_missing_ratio',
+    'error_ratio',
+    'non_get_ratio',
+    'with_body_ratio',
+    'method_diversity',
+    'request_rate_log',
+];
+
+export function modelVector(features) {
+    return MODEL_FEATURES.map((name) => features[name] ?? 0);
 }
 
 // The full labelled dataset: one row per IP with its feature object + label.
