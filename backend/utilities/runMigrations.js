@@ -20,6 +20,10 @@ import {
     createDomainEnrichmentTableQuery,
     createDomainEnrichmentIndexQuery,
 } from './sqlDomainEnrichmentQuerys.js';
+import {
+    createModelTableQuery,
+    createIpScoreTableQuery,
+} from './sqlModelQuerys.js';
 
 // Every schema statement is idempotent (CREATE TABLE / ADD COLUMN / CREATE INDEX
 // IF NOT EXISTS), so it's safe to run them on every boot. This is what makes a
@@ -42,6 +46,8 @@ const MIGRATIONS = [
     ['ip_enrichment abuse_reports', 'ALTER TABLE ip_enrichment ADD COLUMN IF NOT EXISTS abuse_reports JSONB'],
     ['domain_enrichment table', createDomainEnrichmentTableQuery],
     ['domain_enrichment index', createDomainEnrichmentIndexQuery],
+    ['ml_model table', createModelTableQuery],
+    ['ip_risk_score table', createIpScoreTableQuery],
 ];
 
 // Runs all migrations, isolating each so one failure never stops the rest and

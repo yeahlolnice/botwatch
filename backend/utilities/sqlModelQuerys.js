@@ -22,3 +22,48 @@ FROM request_tracking
 WHERE ip_address IS NOT NULL
 GROUP BY ip_address;
 `;
+
+// --- model + score persistence (auto-created by runMigrations) ---
+export const createModelTableQuery = `
+CREATE TABLE IF NOT EXISTS ml_model (
+    name TEXT PRIMARY KEY,
+    model JSONB NOT NULL,
+    metrics JSONB,
+    trained_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`;
+
+export const createIpScoreTableQuery = `
+CREATE TABLE IF NOT EXISTS ip_risk_score (
+    ip TEXT PRIMARY KEY,
+    score INTEGER NOT NULL,
+    label INTEGER,
+    request_count INTEGER,
+    top_factors JSONB,
+    scored_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`;
+
+export const upsertModelQuery = `
+INSERT INTO ml_model (name, model, metrics, trained_at)
+VALUES ($1, $2, $3, NOW())
+ON CONFLICT (name) DO UPDATE SET model = EXCLUDED.model, metrics = EXCLUDED.metrics, trained_at = NOW()
+RETURNING trained_at;
+`;
+
+export const getModelQuery = `SELECT model, metrics, trained_at FROM ml_model WHERE name = $1;`;
+
+export const upsertIpScoreQuery = `
+INSERT INTO ip_risk_score (ip, score, label, request_count, top_factors, scored_at)
+VALUES ($1, $2, $3, $4, $5, NOW())
+ON CONFLICT (ip) DO UPDATE SET
+    score = EXCLUDED.score, label = EXCLUDED.label,
+    request_count = EXCLUDED.request_count, top_factors = EXCLUDED.top_factors, scored_at = NOW();
+`;
+
+export const getTopIpScoresQuery = `
+SELECT ip, score, label, request_count, top_factors, scored_at
+FROM ip_risk_score
+ORDER BY score DESC, request_count DESC NULLS LAST
+LIMIT $1;
+`;
