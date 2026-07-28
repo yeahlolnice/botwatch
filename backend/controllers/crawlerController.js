@@ -12,6 +12,10 @@ import {
     addDomainPriorityColumnQuery,
 } from '../utilities/sqlCrawlerQuerys.js';
 import {
+    createDomainEnrichmentTableQuery,
+    createDomainEnrichmentIndexQuery,
+} from '../utilities/sqlDomainEnrichmentQuerys.js';
+import {
     ensureDomain,
     prioritizeDomain,
     getDomainStatusCounts,
@@ -40,6 +44,10 @@ export const initCrawlerTables = async (req, res) => {
         await query(addDomainRootDomainIndexQuery);
         await query(addPageContentColumnsQuery);
         await query(addDomainPriorityColumnQuery);
+        // domain_enrichment (Phase 1) — created here too so the one Settings
+        // "Init tables" button provisions everything the profile page needs.
+        await query(createDomainEnrichmentTableQuery);
+        await query(createDomainEnrichmentIndexQuery);
         return res.json({ message: 'Crawler tables ready' });
     } catch (error) {
         console.error('Crawler init error:', error);

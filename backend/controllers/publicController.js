@@ -123,19 +123,25 @@ export const getSiteProfile = async (req, res) => {
             return res.json({ found: false, hostname });
         }
 
-        const [recentPage, contacts, subdomainCount, enrichmentResult] = await Promise.all([
+        const [recentPage, contacts, subdomainCount] = await Promise.all([
             getMostRecentCrawledPageForDomain(domain.id),
             getDomainAggregatedContacts(domain.id),
             getSubdomainCount(domain.root_domain, domain.hostname),
-            query(getLatestDomainEnrichmentQuery, [domain.id]),
         ]);
 
         const emails = contacts.emails || [];
         const phoneNumbers = contacts.phone_numbers || [];
 
         // Latest passive-enrichment snapshot (DNS, WHOIS, TLS, headers, hosting,
-        // reputation, subdomains). Null until the domain has been enriched.
-        const enr = enrichmentResult.rows[0] || null;
+        // reputation, subdomains). Supplementary — a missing table or query error
+        // must never break the core profile, so it's isolated from the rest.
+        let enr = null;
+        try {
+            const enrichmentResult = await query(getLatestDomainEnrichmentQuery, [domain.id]);
+            enr = enrichmentResult.rows[0] || null;
+        } catch (enrichErr) {
+            console.warn('Enrichment lookup failed (non-fatal):', enrichErr.message);
+        }
 
         return res.json({
             found: true,
