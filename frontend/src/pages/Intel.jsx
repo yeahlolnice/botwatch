@@ -94,7 +94,7 @@ export default function Intel() {
         ))}
       </div>
 
-      <div className="intel-grid">
+      <div className="intel-grid intel-grid-col-2">
 
         {/* Attack breakdown */}
         <div className="intel-card">

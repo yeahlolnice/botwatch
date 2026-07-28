@@ -90,6 +90,10 @@
   gap: 16px;
 }
 
+.intel-grid.intel-grid-col-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
 .intel-card {
   background: var(--surface);
   border: 1px solid var(--border);
