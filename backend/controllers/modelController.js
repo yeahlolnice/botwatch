@@ -7,6 +7,9 @@ import {
     getModelQuery,
     upsertIpScoreQuery,
     getTopIpScoresQuery,
+    getFeedQuery,
+    upsertIpVerdictQuery,
+    deleteIpVerdictQuery,
 } from '../utilities/sqlModelQuerys.js';
 
 const MODEL_NAME = 'ip_risk';
@@ -80,7 +83,7 @@ export const scoreAllIps = async (req, res) => {
     }
 };
 
-// GET /api/model/scores?limit=50 — highest-risk IPs.
+// GET /api/model/scores?limit=50 — highest-risk IPs (with analyst verdicts).
 export const getScores = async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 500);
@@ -89,5 +92,57 @@ export const getScores = async (req, res) => {
     } catch (error) {
         console.error('Get scores error:', error);
         return res.status(500).json({ error: 'Failed to fetch scores' });
+    }
+};
+
+const csvEscape = (v) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+// GET /api/model/feed?minScore=70&format=json|csv — the scored bad-IP feed.
+export const getFeed = async (req, res) => {
+    try {
+        const minScore = Math.min(Math.max(parseInt(req.query.minScore, 10) || 70, 0), 100);
+        const format = req.query.format === 'csv' ? 'csv' : 'json';
+        const rows = (await query(getFeedQuery, [minScore])).rows;
+
+        if (format === 'csv') {
+            const header = 'ip,score,request_count,scored_at,reason';
+            const body = rows.map((r) => [r.ip, r.score, r.request_count, r.scored_at?.toISOString?.() || r.scored_at, r.explanation].map(csvEscape).join(',')).join('\n');
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename="botwatch-threat-feed.csv"');
+            return res.send(`${header}\n${body}\n`);
+        }
+
+        return res.json({
+            generatedAt: new Date().toISOString(),
+            minScore,
+            count: rows.length,
+            feed: rows.map((r) => ({ ip: r.ip, score: r.score, requestCount: r.request_count, reason: r.explanation, scoredAt: r.scored_at })),
+        });
+    } catch (error) {
+        console.error('Feed error:', error);
+        return res.status(500).json({ error: 'Failed to build feed' });
+    }
+};
+
+// POST /api/model/verdict { ip, verdict } — analyst confirm/deny. verdict is
+// 'malicious', 'benign', or 'clear' (removes the override). Feeds next training.
+export const setVerdict = async (req, res) => {
+    const ip = (req.body?.ip || '').trim();
+    const verdict = (req.body?.verdict || '').trim();
+    if (!ip) return res.status(400).json({ error: 'ip is required' });
+    if (!['malicious', 'benign', 'clear'].includes(verdict)) {
+        return res.status(400).json({ error: "verdict must be 'malicious', 'benign', or 'clear'" });
+    }
+
+    try {
+        if (verdict === 'clear') await query(deleteIpVerdictQuery, [ip]);
+        else await query(upsertIpVerdictQuery, [ip, verdict]);
+        return res.json({ ok: true, ip, verdict });
+    } catch (error) {
+        console.error('Set verdict error:', error);
+        return res.status(500).json({ error: 'Failed to set verdict' });
     }
 };

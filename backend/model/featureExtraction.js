@@ -49,6 +49,11 @@ export function computeFeatures(a) {
 }
 
 export function labelRow(a) {
+    // An analyst verdict (confirm/deny) always wins over the auto-label — this
+    // is the human-in-the-loop correction that improves the next training run.
+    if (a.verdict === 'malicious') return 1;
+    if (a.verdict === 'benign') return 0;
+
     return Number(a.trap_hits) > 0
         || Number(a.threat_requests) > 0
         || Number(a.max_bot_score) >= MALICIOUS_BOT_SCORE

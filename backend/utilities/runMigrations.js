@@ -24,6 +24,7 @@ import {
     createModelTableQuery,
     createIpScoreTableQuery,
     addIpScoreExplanationColumnQuery,
+    createIpVerdictTableQuery,
 } from './sqlModelQuerys.js';
 
 // Every schema statement is idempotent (CREATE TABLE / ADD COLUMN / CREATE INDEX
@@ -50,6 +51,7 @@ const MIGRATIONS = [
     ['ml_model table', createModelTableQuery],
     ['ip_risk_score table', createIpScoreTableQuery],
     ['ip_risk_score explanation column', addIpScoreExplanationColumnQuery],
+    ['ip_verdict table', createIpVerdictTableQuery],
 ];
 
 // Runs all migrations, isolating each so one failure never stops the rest and

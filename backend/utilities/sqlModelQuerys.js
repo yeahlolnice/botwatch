@@ -1,9 +1,12 @@
 // Per-IP behavioural aggregates for the malicious-IP model. One row per source
 // IP, summarising everything the tracker recorded about it. The derived feature
 // vector and the training label are computed from these in featureExtraction.js.
+// LEFT JOINs ip_verdict so an analyst's confirm/deny can override the auto-label
+// at training time (see labelRow). ip_verdict has one row per IP, so the join
+// never multiplies request counts.
 export const ipFeatureAggregatesQuery = `
 SELECT
-    host(ip_address)                                                       AS ip,
+    host(request_tracking.ip_address)                                     AS ip,
     COUNT(*)                                                               AS request_count,
     COUNT(DISTINCT path)                                                   AS distinct_paths,
     COUNT(DISTINCT user_agent)                                             AS distinct_uas,
@@ -17,10 +20,36 @@ SELECT
     COUNT(DISTINCT method)                                                 AS distinct_methods,
     COALESCE(MAX(bot_score), 0)                                            AS max_bot_score,
     COALESCE(AVG(bot_score), 0)::float                                     AS avg_bot_score,
-    EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp)))                  AS span_seconds
+    EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp)))                  AS span_seconds,
+    MAX(v.verdict)                                                         AS verdict
 FROM request_tracking
-WHERE ip_address IS NOT NULL
-GROUP BY ip_address;
+LEFT JOIN ip_verdict v ON v.ip = host(request_tracking.ip_address)
+WHERE request_tracking.ip_address IS NOT NULL
+GROUP BY request_tracking.ip_address;
+`;
+
+// Analyst verdicts (confirm/deny) — the human-in-the-loop labels. Kept in their
+// own table so they survive re-scoring and can override the auto-label.
+export const createIpVerdictTableQuery = `
+CREATE TABLE IF NOT EXISTS ip_verdict (
+    ip TEXT PRIMARY KEY,
+    verdict TEXT NOT NULL,
+    reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`;
+
+export const upsertIpVerdictQuery = `
+INSERT INTO ip_verdict (ip, verdict, reviewed_at) VALUES ($1, $2, NOW())
+ON CONFLICT (ip) DO UPDATE SET verdict = EXCLUDED.verdict, reviewed_at = NOW();
+`;
+
+export const deleteIpVerdictQuery = `DELETE FROM ip_verdict WHERE ip = $1;`;
+
+export const getFeedQuery = `
+SELECT ip, score, explanation, request_count, scored_at
+FROM ip_risk_score
+WHERE score >= $1
+ORDER BY score DESC, request_count DESC NULLS LAST;
 `;
 
 // --- model + score persistence (auto-created by runMigrations) ---
@@ -69,8 +98,9 @@ ON CONFLICT (ip) DO UPDATE SET
 `;
 
 export const getTopIpScoresQuery = `
-SELECT ip, score, label, request_count, top_factors, explanation, scored_at
-FROM ip_risk_score
-ORDER BY score DESC, request_count DESC NULLS LAST
+SELECT s.ip, s.score, s.label, s.request_count, s.top_factors, s.explanation, s.scored_at, v.verdict
+FROM ip_risk_score s
+LEFT JOIN ip_verdict v ON v.ip = s.ip
+ORDER BY s.score DESC, s.request_count DESC NULLS LAST
 LIMIT $1;
 `;

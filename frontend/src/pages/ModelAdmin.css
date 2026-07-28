@@ -97,3 +97,22 @@
 .model-score--low { background: color-mix(in srgb, var(--green, #4ade80) 16%, transparent); color: var(--green, #4ade80); }
 
 .model-empty { color: var(--text-dim); font-size: 14px; padding: 20px 0; }
+
+.model-feed-links { display: flex; gap: 10px; flex-wrap: wrap; }
+.model-feed-links .model-btn { text-decoration: none; display: inline-block; }
+
+.model-verdict { white-space: nowrap; }
+.model-vbtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 6px;
+  width: 28px;
+  height: 26px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 4px;
+}
+.model-vbtn:hover { color: var(--text); }
+.model-vbtn--mal { background: color-mix(in srgb, #ef4444 20%, transparent); color: #ef6b6b; border-color: transparent; }
+.model-vbtn--ben { background: color-mix(in srgb, var(--green, #4ade80) 18%, transparent); color: var(--green, #4ade80); border-color: transparent; }
