@@ -105,6 +105,9 @@ export function scoreFeatures(model, features) {
     const contributions = model.weights.map((wj, j) => ({
         feature: model.featureNames[j],
         impact: wj * x[j],
+        // scaled value: >0 means above average for this feature, <0 below.
+        // Lets the explainer say whether the driver was a HIGH or LOW value.
+        z: x[j],
     }));
     const z = contributions.reduce((s, c) => s + c.impact, 0) + model.bias;
     const score = Math.round(sigmoid(z) * 100);

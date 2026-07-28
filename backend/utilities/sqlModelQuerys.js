@@ -40,8 +40,14 @@ CREATE TABLE IF NOT EXISTS ip_risk_score (
     label INTEGER,
     request_count INTEGER,
     top_factors JSONB,
+    explanation TEXT,
     scored_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+`;
+
+// For installs created before the explanation column existed.
+export const addIpScoreExplanationColumnQuery = `
+ALTER TABLE ip_risk_score ADD COLUMN IF NOT EXISTS explanation TEXT;
 `;
 
 export const upsertModelQuery = `
@@ -54,15 +60,16 @@ RETURNING trained_at;
 export const getModelQuery = `SELECT model, metrics, trained_at FROM ml_model WHERE name = $1;`;
 
 export const upsertIpScoreQuery = `
-INSERT INTO ip_risk_score (ip, score, label, request_count, top_factors, scored_at)
-VALUES ($1, $2, $3, $4, $5, NOW())
+INSERT INTO ip_risk_score (ip, score, label, request_count, top_factors, explanation, scored_at)
+VALUES ($1, $2, $3, $4, $5, $6, NOW())
 ON CONFLICT (ip) DO UPDATE SET
     score = EXCLUDED.score, label = EXCLUDED.label,
-    request_count = EXCLUDED.request_count, top_factors = EXCLUDED.top_factors, scored_at = NOW();
+    request_count = EXCLUDED.request_count, top_factors = EXCLUDED.top_factors,
+    explanation = EXCLUDED.explanation, scored_at = NOW();
 `;
 
 export const getTopIpScoresQuery = `
-SELECT ip, score, label, request_count, top_factors, scored_at
+SELECT ip, score, label, request_count, top_factors, explanation, scored_at
 FROM ip_risk_score
 ORDER BY score DESC, request_count DESC NULLS LAST
 LIMIT $1;
