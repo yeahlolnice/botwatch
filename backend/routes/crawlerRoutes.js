@@ -2,6 +2,7 @@ import express from 'express';
 import {
     initCrawlerTables,
     seedDomains,
+    prioritizeDomainHandler,
     runCrawlBatch,
     processSitemaps,
     getCrawlerStatus,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.post('/init', initCrawlerTables);
 router.post('/domains/seed', seedDomains);
+router.post('/domains/prioritize', prioritizeDomainHandler);
 router.post('/run', runCrawlBatch);
 router.post('/sitemaps/process', processSitemaps);
 router.get('/status', getCrawlerStatus);

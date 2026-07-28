@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../api.js'
 import './CrawlerAdmin.css'
 
@@ -61,6 +62,8 @@ export default function CrawlerAdmin() {
     const [maxPagesPerDomain, setMaxPagesPerDomain] = useState('')
     const [maxDomainsThisRun, setMaxDomainsThisRun] = useState('')
     const [maxSitemapsThisRun, setMaxSitemapsThisRun] = useState('')
+    const [enrichInput, setEnrichInput] = useState('')
+    const [prioritizeInput, setPrioritizeInput] = useState('')
 
     const pollIntervalsRef = useRef({})
     const pollCancelledRef = useRef({})
@@ -216,6 +219,44 @@ export default function CrawlerAdmin() {
         }
     }
 
+    const handleEnrich = async () => {
+        const host = enrichInput.trim()
+        if (!host) { pushLog('Enrich skipped: no hostname entered'); return }
+
+        setBusy('enrich')
+        try {
+            const r = await apiFetch('/api/enrich/domain', { method: 'POST', body: JSON.stringify({ hostname: host }) })
+            const e = r.enrichment || {}
+            const bits = [
+                e.hosting?.asn,
+                e.tls?.issuer && `TLS ${e.tls.issuer}`,
+                e.securityHeaders?.grade && `headers ${e.securityHeaders.grade}`,
+                e.subdomains?.count != null && `${e.subdomains.count} subdomains`,
+            ].filter(Boolean)
+            pushLog(`Enriched ${r.hostname}${bits.length ? ` — ${bits.join(', ')}` : ' — stored'}`)
+        } catch (e) {
+            pushLog(`Enrich failed: ${e.message}`)
+        } finally {
+            setBusy(null)
+        }
+    }
+
+    const handlePrioritize = async () => {
+        const host = prioritizeInput.trim()
+        if (!host) { pushLog('Prioritize skipped: no hostname entered'); return }
+
+        setBusy('prioritize')
+        try {
+            const r = await apiFetch('/api/crawler/domains/prioritize', { method: 'POST', body: JSON.stringify({ hostname: host }) })
+            pushLog(`Prioritized ${r.domain?.hostname || host} — it'll be crawled first next batch`)
+            await fetchStatus()
+        } catch (e) {
+            pushLog(`Prioritize failed: ${e.message}`)
+        } finally {
+            setBusy(null)
+        }
+    }
+
     if (isAdmin === null) return null
 
     if (!isAdmin) {
@@ -301,6 +342,34 @@ export default function CrawlerAdmin() {
                         {busy === 'sitemaps' ? 'Processing…' : 'Process sitemaps'}
                     </button>
                     <RunningBadge tracker={status?.sitemaps} />
+                </div>
+
+                <div className="crawler-card">
+                    <h3>Enrich a domain</h3>
+                    <p className="crawler-card-sub">Runs passive enrichment now (DNS, WHOIS, TLS, security headers, hosting, subdomains) and stores a snapshot. View it on the site's <Link to="/search">profile</Link>.</p>
+                    <input
+                        className="crawler-textarea"
+                        placeholder="example.com"
+                        value={enrichInput}
+                        onChange={e => setEnrichInput(e.target.value)}
+                    />
+                    <button className="crawler-btn crawler-btn--primary" onClick={handleEnrich} disabled={busy !== null}>
+                        {busy === 'enrich' ? 'Enriching…' : 'Enrich now'}
+                    </button>
+                </div>
+
+                <div className="crawler-card">
+                    <h3>Jump a domain to the front of the queue</h3>
+                    <p className="crawler-card-sub">Marks a domain top-priority and re-queues it, so the next crawl batch picks it up before anything else.</p>
+                    <input
+                        className="crawler-textarea"
+                        placeholder="example.com"
+                        value={prioritizeInput}
+                        onChange={e => setPrioritizeInput(e.target.value)}
+                    />
+                    <button className="crawler-btn crawler-btn--primary" onClick={handlePrioritize} disabled={busy !== null}>
+                        {busy === 'prioritize' ? 'Prioritizing…' : 'Prioritize'}
+                    </button>
                 </div>
             </div>
 

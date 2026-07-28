@@ -9,9 +9,11 @@ import {
     addDomainProfileColumnsQuery,
     addDomainRootDomainIndexQuery,
     addPageContentColumnsQuery,
+    addDomainPriorityColumnQuery,
 } from '../utilities/sqlCrawlerQuerys.js';
 import {
     ensureDomain,
+    prioritizeDomain,
     getDomainStatusCounts,
     getPageStatusCounts,
     getDomainReadinessCounts,
@@ -37,6 +39,7 @@ export const initCrawlerTables = async (req, res) => {
         await query(addDomainProfileColumnsQuery);
         await query(addDomainRootDomainIndexQuery);
         await query(addPageContentColumnsQuery);
+        await query(addDomainPriorityColumnQuery);
         return res.json({ message: 'Crawler tables ready' });
     } catch (error) {
         console.error('Crawler init error:', error);
@@ -76,6 +79,29 @@ export const seedDomains = async (req, res) => {
     } catch (error) {
         console.error('Seed domains error:', error);
         return res.status(500).json({ error: 'Failed to seed domains' });
+    }
+};
+
+// POST /api/crawler/domains/prioritize — body: { hostname }
+// Jump a domain to the front of the crawl queue (creates it if new).
+export const prioritizeDomainHandler = async (req, res) => {
+    const raw = (req.body?.hostname || '').trim();
+    if (!raw) return res.status(400).json({ error: 'hostname is required' });
+
+    try {
+        const parsed = parseUrlParts(raw.includes('://') ? raw : `https://${raw}`);
+        if (!parsed) return res.status(400).json({ error: 'Invalid hostname' });
+
+        if (await isHostnameBlocked(parsed.hostname)) {
+            return res.status(400).json({ error: 'Refusing to queue a private/internal host' });
+        }
+
+        await ensureDomain(parsed.hostname);
+        const domain = await prioritizeDomain(parsed.hostname);
+        return res.json({ ok: true, domain });
+    } catch (error) {
+        console.error('Prioritize domain error:', error);
+        return res.status(500).json({ error: 'Failed to prioritize domain' });
     }
 };
 
