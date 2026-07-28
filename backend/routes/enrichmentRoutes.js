@@ -6,6 +6,10 @@ import {
     getIpSummary,
     initEnrichmentTable,
 } from '../controllers/enrichmentController.js';
+import {
+    enrichDomainNow,
+    getDomainEnrichment,
+} from '../controllers/domainEnrichmentController.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -24,5 +28,9 @@ router.get('/summary/:ip', getIpSummary);
 router.get('/check/:ip', enrichLimiter, checkIp);
 router.post('/report', reportIp);
 router.post('/init', initEnrichmentTable);
+
+// Domain enrichment (passive: DNS, RDAP/WHOIS, email posture)
+router.post('/domain', enrichLimiter, enrichDomainNow);
+router.get('/domain/:hostname', getDomainEnrichment);
 
 export default router;
