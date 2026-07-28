@@ -35,6 +35,122 @@ function Badge({ ok, label }) {
   )
 }
 
+function fmtDate(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? iso : d.toISOString().slice(0, 10)
+}
+
+function ageLabel(days) {
+  if (days == null) return null
+  const y = Math.floor(days / 365)
+  return y > 0 ? `${y}y ${days % 365}d` : `${days}d`
+}
+
+function KV({ label, children }) {
+  if (children == null || children === '') return null
+  return <div className="intel-kv"><dt>{label}</dt><dd>{children}</dd></div>
+}
+
+// Domain Intelligence — the passive-enrichment dossier (DNS, WHOIS, TLS, headers,
+// hosting, reputation, subdomains). Each block renders only when its source ran.
+function DomainIntel({ enrichment }) {
+  const { dns, whois, emailPosture, tls, securityHeaders, hosting, reputation, subdomains } = enrichment
+
+  return (
+    <>
+      {hosting?.ok && (
+        <div className="search-section">
+          <h3>Hosting</h3>
+          <dl className="intel-grid">
+            <KV label="IP">{hosting.ip}</KV>
+            <KV label="ASN">{[hosting.asn, hosting.asName].filter(Boolean).join(' · ')}</KV>
+            <KV label="Country">{hosting.country}</KV>
+            {(hosting.cdn || hosting.waf) && (
+              <KV label="CDN / WAF">{[hosting.cdn, hosting.waf && `WAF: ${hosting.waf}`].filter(Boolean).join(' · ')}</KV>
+            )}
+          </dl>
+        </div>
+      )}
+
+      {whois?.ok && (
+        <div className="search-section">
+          <h3>Registration</h3>
+          <dl className="intel-grid">
+            <KV label="Registrar">{whois.registrar}</KV>
+            <KV label="Registered">{fmtDate(whois.registeredAt)}</KV>
+            <KV label="Expires">{fmtDate(whois.expiresAt)}</KV>
+            <KV label="Domain age">{ageLabel(whois.ageDays)}</KV>
+          </dl>
+        </div>
+      )}
+
+      {tls?.ok && (
+        <div className="search-section">
+          <h3>TLS Certificate</h3>
+          <dl className="intel-grid">
+            <KV label="Issuer">{tls.issuer}</KV>
+            <KV label="Protocol">{tls.protocol}</KV>
+            <KV label="Key">{tls.keyType}</KV>
+            <KV label="Expires">{[fmtDate(tls.validTo), tls.daysToExpiry != null && `${tls.daysToExpiry}d left`].filter(Boolean).join(' · ')}</KV>
+          </dl>
+        </div>
+      )}
+
+      {securityHeaders?.ok && (
+        <div className="search-section">
+          <h3>Security Headers <span className="intel-grade" data-grade={securityHeaders.grade}>{securityHeaders.grade}</span></h3>
+          <div className="search-badges">
+            {(securityHeaders.present || []).map(h => <Badge key={h} ok label={h} />)}
+            {(securityHeaders.missing || []).map(h => <Badge key={h} ok={false} label={h} />)}
+          </div>
+        </div>
+      )}
+
+      {emailPosture && (emailPosture.spfPresent || emailPosture.dmarcPresent) && (
+        <div className="search-section">
+          <h3>Email Security <span className="intel-grade" data-grade={emailPosture.grade}>{emailPosture.grade}</span></h3>
+          <div className="search-badges">
+            <Badge ok={emailPosture.spfPresent} label="SPF" />
+            <Badge ok={emailPosture.dmarcPresent} label={`DMARC${emailPosture.dmarcPolicy ? ` (${emailPosture.dmarcPolicy})` : ''}`} />
+          </div>
+        </div>
+      )}
+
+      {dns && (dns.a?.length > 0 || dns.mx?.length > 0 || dns.ns?.length > 0) && (
+        <div className="search-section">
+          <h3>DNS Records</h3>
+          <dl className="intel-grid">
+            {dns.a?.length > 0 && <KV label="A">{dns.a.join(', ')}</KV>}
+            {dns.aaaa?.length > 0 && <KV label="AAAA">{dns.aaaa.slice(0, 3).join(', ')}</KV>}
+            {dns.mx?.length > 0 && <KV label="MX">{dns.mx.map(m => m.exchange).join(', ')}</KV>}
+            {dns.ns?.length > 0 && <KV label="NS">{dns.ns.join(', ')}</KV>}
+          </dl>
+        </div>
+      )}
+
+      {subdomains?.ok && subdomains.count > 0 && (
+        <div className="search-section">
+          <h3>Subdomains <span className="intel-count">{subdomains.count}</span></h3>
+          <div className="search-chips">
+            {subdomains.subdomains.slice(0, 30).map(s => <span key={s} className="search-chip">{s}</span>)}
+          </div>
+          {subdomains.count > 30 && <p className="search-section-sub">+ {subdomains.count - 30} more</p>}
+        </div>
+      )}
+
+      {reputation?.ok && (
+        <div className="search-section">
+          <h3>Reputation</h3>
+          {reputation.listed
+            ? <p className="search-section-sub search-rep-bad">⚠ Listed on {reputation.source} — {reputation.urlCount} malicious URL{reputation.urlCount === 1 ? '' : 's'}</p>
+            : <p className="search-section-sub">✓ No listings found on {reputation.source}.</p>}
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function SiteSearch() {
   const [input, setInput] = useState('')
   const [searchedHost, setSearchedHost] = useState(null)
@@ -94,7 +210,7 @@ export default function SiteSearch() {
     <main className="search-page">
       <div className="search-header">
         <h1>Site Search</h1>
-        <p>Look up any domain <Link to="/willowbot">Willowbot</Link> has crawled — AI readiness, tech stack, category, and more.</p>
+        <p>Look up any domain <Link to="/willowbot">Willowbot</Link> has crawled — AI readiness, security posture, hosting, DNS, tech stack, and more.</p>
       </div>
 
       <form className="search-form" onSubmit={handleSearch}>
@@ -175,6 +291,8 @@ export default function SiteSearch() {
                 </div>
               </div>
             )}
+
+            {profile.enrichment && <DomainIntel enrichment={profile.enrichment} />}
 
             {profile.techStack?.length > 0 && (
               <div className="search-section">

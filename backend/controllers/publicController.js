@@ -19,6 +19,7 @@ import {
     getSubdomainCount,
 } from '../crawler/db.js';
 import { maskEmail, maskPhoneNumber } from '../utilities/maskingUtils.js';
+import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichmentQuerys.js';
 
 const HOSTNAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 
@@ -122,14 +123,19 @@ export const getSiteProfile = async (req, res) => {
             return res.json({ found: false, hostname });
         }
 
-        const [recentPage, contacts, subdomainCount] = await Promise.all([
+        const [recentPage, contacts, subdomainCount, enrichmentResult] = await Promise.all([
             getMostRecentCrawledPageForDomain(domain.id),
             getDomainAggregatedContacts(domain.id),
             getSubdomainCount(domain.root_domain, domain.hostname),
+            query(getLatestDomainEnrichmentQuery, [domain.id]),
         ]);
 
         const emails = contacts.emails || [];
         const phoneNumbers = contacts.phone_numbers || [];
+
+        // Latest passive-enrichment snapshot (DNS, WHOIS, TLS, headers, hosting,
+        // reputation, subdomains). Null until the domain has been enriched.
+        const enr = enrichmentResult.rows[0] || null;
 
         return res.json({
             found: true,
@@ -159,6 +165,17 @@ export const getSiteProfile = async (req, res) => {
                 phoneCount: phoneNumbers.length,
                 emails: emails.map(maskEmail),
                 phoneNumbers: phoneNumbers.map(maskPhoneNumber),
+            },
+            enrichment: enr && {
+                collectedAt: enr.collected_at,
+                dns: enr.dns,
+                whois: enr.whois,
+                emailPosture: enr.email_posture,
+                tls: enr.tls,
+                securityHeaders: enr.security_headers,
+                hosting: enr.hosting,
+                reputation: enr.reputation,
+                subdomains: enr.subdomains,
             },
         });
     } catch (error) {

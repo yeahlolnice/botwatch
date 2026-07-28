@@ -266,3 +266,63 @@
   font-size: 13px;
   cursor: not-allowed;
 }
+
+/* ---- Domain Intelligence (enrichment) ---- */
+.intel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px 22px;
+  margin: 0;
+}
+.intel-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.intel-kv dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+.intel-kv dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--mono);
+  word-break: break-word;
+}
+.intel-grade {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+.intel-grade[data-grade="A"],
+.intel-grade[data-grade="B"] {
+  background: color-mix(in srgb, var(--green, #4ade80) 16%, transparent);
+  color: var(--green, #4ade80);
+}
+.intel-grade[data-grade="C"] {
+  background: color-mix(in srgb, var(--yellow, #eab308) 16%, transparent);
+  color: var(--yellow, #eab308);
+}
+.intel-grade[data-grade="D"],
+.intel-grade[data-grade="F"] {
+  background: color-mix(in srgb, #ef4444 16%, transparent);
+  color: #ef6b6b;
+}
+.intel-count {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.search-rep-bad {
+  color: #ef6b6b;
+}
