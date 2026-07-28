@@ -9,6 +9,10 @@ import {
     getIpThreatSignalsQuery,
     getIpPathsQuery,
 } from '../utilities/sqlEnrichmentQuerys.js';
+import {
+    createDomainEnrichmentTableQuery,
+    createDomainEnrichmentIndexQuery,
+} from '../utilities/sqlDomainEnrichmentQuerys.js';
 
 const ABUSEIPDB_BASE = 'https://api.abuseipdb.com/api/v2';
 // Cache TTL — don't re-check the same IP within 24 hours
@@ -166,7 +170,10 @@ export const initEnrichmentTable = async (req, res) => {
         await query(createEnrichmentTableQuery);
         // Add columns introduced after initial table creation
         await query(`ALTER TABLE ip_enrichment ADD COLUMN IF NOT EXISTS abuse_reports JSONB`);
-        return res.json({ message: 'ip_enrichment table ready' });
+        // Domain enrichment snapshot store (Phase 1)
+        await query(createDomainEnrichmentTableQuery);
+        await query(createDomainEnrichmentIndexQuery);
+        return res.json({ message: 'ip_enrichment + domain_enrichment tables ready' });
     } catch (error) {
         console.error('Enrichment init error:', error);
         return res.status(500).json({ error: 'Failed to init enrichment table' });
