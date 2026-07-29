@@ -52,6 +52,11 @@ WHERE score >= $1
 ORDER BY score DESC, request_count DESC NULLS LAST;
 `;
 
+export const getIpScoreByIpQuery = `
+SELECT ip, score, explanation, request_count, scored_at
+FROM ip_risk_score WHERE ip = $1;
+`;
+
 // --- model + score persistence (auto-created by runMigrations) ---
 export const createModelTableQuery = `
 CREATE TABLE IF NOT EXISTS ml_model (
