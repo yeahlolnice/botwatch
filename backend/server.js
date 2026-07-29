@@ -15,6 +15,8 @@ import publicRoutes from './routes/publicRoutes.js';
 import enrichmentRoutes from './routes/enrichmentRoutes.js';
 import crawlerRoutes from './routes/crawlerRoutes.js';
 import modelRoutes from './routes/modelRoutes.js';
+import apiKeyRoutes from './routes/apiKeyRoutes.js';
+import v1Routes from './routes/v1Routes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
@@ -93,6 +95,10 @@ app.use('/api/auth', authRoutes);
 // Public data routes — no auth, rate limited
 app.use('/api/public', publicRoutes);
 
+// Public API — authenticated by API key (not the admin cookie), so it must be
+// mounted before the JWT-cookie gate below.
+app.use('/api/v1', v1Routes);
+
 // All other /api/* routes require a valid JWT cookie
 app.use('/api', requireAuth);
 
@@ -101,6 +107,7 @@ app.use('/api/traffic', trafficLimiter, trackingRoutes);
 app.use('/api/enrich', requireAdmin, enrichmentRoutes);
 app.use('/api/crawler', requireAdmin, crawlerRoutes);
 app.use('/api/model', requireAdmin, modelRoutes);
+app.use('/api/keys', requireAdmin, apiKeyRoutes);
 
 // 404 for unmatched API routes
 app.use('/api', (req, res) => {
