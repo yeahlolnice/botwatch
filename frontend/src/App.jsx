@@ -11,6 +11,8 @@ import AdminSettings from './pages/AdminSettings'
 import ModelAdmin from './pages/ModelAdmin'
 import ApiKeys from './pages/ApiKeys'
 import ApiDocs from './pages/ApiDocs'
+import Pricing from './pages/Pricing'
+import BillingSuccess from './pages/BillingSuccess'
 import Report from './pages/Report'
 import Login from './pages/Login'
 import Access from './pages/Access'
@@ -55,6 +57,7 @@ function Nav() {
         <Link to="/readiness" className={pathname === '/readiness' ? 'active' : ''}>Readiness</Link>
         <Link to="/search" className={pathname === '/search' ? 'active' : ''}>Search</Link>
         <Link to="/docs" className={pathname === '/docs' ? 'active' : ''}>API</Link>
+        <Link to="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Pricing</Link>
         {authed && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
         {authed && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
@@ -81,6 +84,8 @@ export default function App() {
         <Route path="/willowbot" element={<Willowbot />} />
         <Route path="/search" element={<SiteSearch />} />
         <Route path="/docs" element={<ApiDocs />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/billing/success" element={<BillingSuccess />} />
         <Route
           path="/report"
           element={

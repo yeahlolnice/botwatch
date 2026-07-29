@@ -27,6 +27,7 @@ import {
     createIpVerdictTableQuery,
 } from './sqlModelQuerys.js';
 import { createApiKeyTableQuery } from './sqlApiKeyQuerys.js';
+import { addApiKeyBillingColumnsQuery, createBillingOrderTableQuery } from './sqlBillingQuerys.js';
 
 // Every schema statement is idempotent (CREATE TABLE / ADD COLUMN / CREATE INDEX
 // IF NOT EXISTS), so it's safe to run them on every boot. This is what makes a
@@ -54,6 +55,8 @@ const MIGRATIONS = [
     ['ip_risk_score explanation column', addIpScoreExplanationColumnQuery],
     ['ip_verdict table', createIpVerdictTableQuery],
     ['api_key table', createApiKeyTableQuery],
+    ['api_key billing columns', addApiKeyBillingColumnsQuery],
+    ['billing_order table', createBillingOrderTableQuery],
 ];
 
 // Runs all migrations, isolating each so one failure never stops the rest and
