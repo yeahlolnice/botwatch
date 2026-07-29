@@ -143,7 +143,7 @@ export default function ApiDocs() {
         </p>
         <div className="doc-hero-actions">
           <a className="doc-btn doc-btn--primary" href="#endpoints">Explore endpoints</a>
-          <Link className="doc-btn" to="/login">Get a key</Link>
+          <Link className="doc-btn" to="/pricing">Get a key</Link>
         </div>
       </div>
 
@@ -247,8 +247,8 @@ curl -H "Authorization: Bearer bw_YOUR_KEY" ${BASE}/status`}</Code>
 
       <div className="doc-cta">
         <h2>Ready to build?</h2>
-        <p>Sign in to generate a key and start pulling live intelligence.</p>
-        <Link className="doc-btn doc-btn--primary" to="/login">Get your API key</Link>
+        <p>Choose a plan and your key is issued the moment payment clears.</p>
+        <Link className="doc-btn doc-btn--primary" to="/pricing">View pricing</Link>
       </div>
     </main>
   )

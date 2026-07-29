@@ -21,6 +21,14 @@ VALUES ($1, $2, $3, $4)
 RETURNING id, key_prefix, label, tier, active, created_at;
 `;
 
+// Insert used by the billing flow — carries the Stripe linkage so an issued key
+// can be traced to its subscription. Plaintext is never passed here (only hash).
+export const insertBillingApiKeyQuery = `
+INSERT INTO api_key (key_hash, key_prefix, label, tier, stripe_customer_id, stripe_subscription_id, stripe_session_id, customer_email)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, key_prefix, tier;
+`;
+
 export const getApiKeyByHashQuery = `
 SELECT id, key_prefix, label, tier, active, request_count
 FROM api_key WHERE key_hash = $1;

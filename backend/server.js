@@ -17,6 +17,7 @@ import crawlerRoutes from './routes/crawlerRoutes.js';
 import modelRoutes from './routes/modelRoutes.js';
 import apiKeyRoutes from './routes/apiKeyRoutes.js';
 import v1Routes from './routes/v1Routes.js';
+import billingRoutes from './routes/billingRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
@@ -98,6 +99,10 @@ app.use('/api/public', publicRoutes);
 // Public API — authenticated by API key (not the admin cookie), so it must be
 // mounted before the JWT-cookie gate below.
 app.use('/api/v1', v1Routes);
+
+// Billing — Stripe Checkout + webhook. Public (buyers aren't logged in; Stripe
+// sends no cookie), so mounted before the JWT gate. No-ops until Stripe is set up.
+app.use('/api/billing', billingRoutes);
 
 // All other /api/* routes require a valid JWT cookie
 app.use('/api', requireAuth);
