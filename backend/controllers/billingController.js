@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { query } from '../utilities/connectDB.js';
 import { generateApiKey } from '../utilities/apiKey.js';
 import { insertBillingApiKeyQuery } from '../utilities/sqlApiKeyQuerys.js';
@@ -26,6 +27,20 @@ export const billingConfig = (req, res) => {
 const baseUrl = (req) =>
     (process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
 
+// Checkout is public (buyers needn't be logged in), but if a customer IS logged
+// in we read their email from the session cookie so the resulting order links to
+// their account automatically. Never trusts a client-supplied email.
+const customerEmailFromReq = (req) => {
+    try {
+        const token = req.cookies?.auth_token;
+        if (!token) return null;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.role === 'customer' ? decoded.email : null;
+    } catch {
+        return null;
+    }
+};
+
 // POST /api/billing/checkout { tier } — create a Stripe Checkout Session for a
 // subscription tier and hand back its hosted URL for the browser to redirect to.
 export const createCheckout = async (req, res) => {
@@ -42,6 +57,7 @@ export const createCheckout = async (req, res) => {
 
     try {
         const base = baseUrl(req);
+        const email = customerEmailFromReq(req);
         const session = await stripe.checkout.sessions.create({
             mode: 'subscription',
             line_items: [{ price, quantity: 1 }],
@@ -49,6 +65,7 @@ export const createCheckout = async (req, res) => {
             cancel_url: `${base}/pricing`,
             metadata: { tier },
             subscription_data: { metadata: { tier } },
+            ...(email ? { customer_email: email } : {}),
         });
         return res.json({ url: session.url });
     } catch (error) {

@@ -13,6 +13,7 @@ import ApiKeys from './pages/ApiKeys'
 import ApiDocs from './pages/ApiDocs'
 import Pricing from './pages/Pricing'
 import BillingSuccess from './pages/BillingSuccess'
+import Account from './pages/Account'
 import Report from './pages/Report'
 import Login from './pages/Login'
 import Access from './pages/Access'
@@ -38,6 +39,8 @@ function Nav() {
 
   const authed = !!user
   const isAdmin = user?.role === 'admin'
+  const isCustomer = user?.role === 'customer'
+  const isResearch = authed && !isCustomer
 
   if (pathname === '/login') return null
   return (
@@ -58,14 +61,15 @@ function Nav() {
         <Link to="/search" className={pathname === '/search' ? 'active' : ''}>Search</Link>
         <Link to="/docs" className={pathname === '/docs' ? 'active' : ''}>API</Link>
         <Link to="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Pricing</Link>
-        {authed && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
-        {authed && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
+        {isResearch && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
+        {isResearch && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
         {isAdmin && <Link to="/admin/model" className={pathname === '/admin/model' ? 'active' : ''}>Model</Link>}
         {isAdmin && <Link to="/admin/keys" className={pathname === '/admin/keys' ? 'active' : ''}>API Keys</Link>}
         {isAdmin && <Link to="/admin/settings" className={pathname === '/admin/settings' ? 'active' : ''}>Settings</Link>}
+        {!isResearch && <Link to="/account" className={pathname === '/account' ? 'active' : ''}>Account</Link>}
         {authed
-          ? <button className="nav-signout" onClick={() => { fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => setUser(null)); setMenuOpen(false) }}>Sign out</button>
+          ? <button className="nav-signout" onClick={() => { const url = isCustomer ? '/api/account/logout' : '/api/auth/logout'; fetch(url, { method: 'POST', credentials: 'include' }).then(() => setUser(null)); setMenuOpen(false) }}>Sign out</button>
           : <Link to="/login" className={pathname === '/login' ? 'active' : ''}>Sign in</Link>
         }
       </div>
@@ -86,10 +90,11 @@ export default function App() {
         <Route path="/docs" element={<ApiDocs />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/billing/success" element={<BillingSuccess />} />
+        <Route path="/account" element={<Account />} />
         <Route
           path="/report"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['admin', 'user', 'guest']}>
               <Report />
             </ProtectedRoute>
           }
@@ -99,7 +104,7 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['admin', 'user', 'guest']}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -107,7 +112,7 @@ export default function App() {
         <Route
           path="/admin/crawler"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['admin']}>
               <CrawlerAdmin />
             </ProtectedRoute>
           }
@@ -115,7 +120,7 @@ export default function App() {
         <Route
           path="/admin/model"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['admin']}>
               <ModelAdmin />
             </ProtectedRoute>
           }
@@ -123,7 +128,7 @@ export default function App() {
         <Route
           path="/admin/keys"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['admin']}>
               <ApiKeys />
             </ProtectedRoute>
           }
@@ -131,7 +136,7 @@ export default function App() {
         <Route
           path="/admin/settings"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={['admin']}>
               <AdminSettings />
             </ProtectedRoute>
           }

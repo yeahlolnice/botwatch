@@ -70,7 +70,7 @@ export default function BillingSuccess() {
               <code>{state.key}</code>
               <button className="bs-copy" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
             </div>
-            <p className="bs-hint">Use it with the <code>x-api-key</code> header. See the <Link to="/docs">API docs</Link> to get started.</p>
+            <p className="bs-hint">Use it with the <code>x-api-key</code> header — see the <Link to="/docs">API docs</Link>. Manage keys anytime in <Link to="/account">your account</Link>.</p>
           </>
         )}
 
