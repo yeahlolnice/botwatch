@@ -35,11 +35,19 @@ export async function checkSecurityHeaders(hostname) {
 
     const score = Math.round((present.length / CHECKS.length) * 100);
     const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 50 ? 'C' : score >= 25 ? 'D' : 'F';
+    const gradeWord = {
+        'A': 'Excellent',
+        'B': 'Good',
+        'C': 'Average',
+        'D': 'Poor',
+        'F': 'Bad',
+    };
 
     return {
         ok: true,
         status: response.status,
         grade,
+        gradeWord: gradeWord[grade],
         score,
         present,
         missing,

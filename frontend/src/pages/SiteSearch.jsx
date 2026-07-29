@@ -99,7 +99,7 @@ function DomainIntel({ enrichment }) {
 
       {securityHeaders?.ok && (
         <div className="search-section">
-          <h3>Security Headers <span className="intel-grade" data-grade={securityHeaders.grade}>{securityHeaders.grade}</span></h3>
+          <h3>Security Headers | Score:<span className="intel-grade" data-grade={securityHeaders.grade}>{securityHeaders.gradeWord} ({securityHeaders.grade})</span></h3>
           <div className="search-badges">
             {(securityHeaders.present || []).map(h => <Badge key={h} ok label={h} />)}
             {(securityHeaders.missing || []).map(h => <Badge key={h} ok={false} label={h} />)}
@@ -252,6 +252,7 @@ export default function SiteSearch() {
               </div>
               <div className="search-stat">
                 <span className="search-stat-value">{fmt(profile.pagesCrawled)}</span>
+                <span className="search-stat-value">{fmt(profile.sch)}</span>
                 <span className="search-stat-label">Pages Crawled</span>
               </div>
               <div className="search-stat">

@@ -195,7 +195,7 @@ export default function Intel() {
       </div>
 
       <div className="intel-footer">
-        <span>All data collected passively. No active scanning.</span>
+        <span>All data collected passively.</span>
         <Link to="/">← Back to home</Link>
       </div>
     </main>

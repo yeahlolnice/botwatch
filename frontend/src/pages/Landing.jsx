@@ -84,11 +84,12 @@ export default function Landing() {
       <section className="hero-section">
         <div className="hero-badge">Cybersecurity Research · Open Data Collection</div>
         <h1 className="hero-title">
-          What are bots actually<br />doing to your server?
+          The Global AI Readiness Index
         </h1>
         <p className="hero-desc">
-          botwatch.xyz is an open research project studying how malicious bots, automated scanners,
-          and threat actors interact with web infrastructure in the wild — and what they're looking for.
+          botwatch.xyz is an open research project studying AI readiness, automated crawlers, 
+          and malicious bots. We analyze how inbound requests interact with web infrastructure in the wild, 
+          tracking llms.txt compliance, LLM citation metrics, and automated threats to understand what autonomous agents are looking for.
         </p>
         <div className="hero-actions">
           <Link to="/intel" className="btn-primary">Live Intel →</Link>
