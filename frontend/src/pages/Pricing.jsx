@@ -80,8 +80,8 @@ export default function Pricing() {
 
       {config && !config.configured && (
         <div className="price-banner">
-          Online checkout is being set up. In the meantime,{' '}
-          <Link to="/login">sign in</Link> and an admin can issue you a key.
+          Online checkout is being set up. In the meantime, you can{' '}
+          <Link to="/account">create a free account</Link> to get a starter key.
         </div>
       )}
       {error && <div className="price-error">{error}</div>}

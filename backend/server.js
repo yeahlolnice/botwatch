@@ -18,9 +18,11 @@ import modelRoutes from './routes/modelRoutes.js';
 import apiKeyRoutes from './routes/apiKeyRoutes.js';
 import v1Routes from './routes/v1Routes.js';
 import billingRoutes from './routes/billingRoutes.js';
+import accountRoutes from './routes/accountRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
+import { requireResearchAccess } from './middleware/requireResearchAccess.js';
 import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 import { runMigrations } from './utilities/runMigrations.js';
 
@@ -104,11 +106,15 @@ app.use('/api/v1', v1Routes);
 // sends no cookie), so mounted before the JWT gate. No-ops until Stripe is set up.
 app.use('/api/billing', billingRoutes);
 
+// Customer accounts — signup/login are public; the portal routes gate themselves
+// with requireAuth + requireCustomer. Mounted before the admin JWT gate.
+app.use('/api/account', accountRoutes);
+
 // All other /api/* routes require a valid JWT cookie
 app.use('/api', requireAuth);
 
 app.use('/api/users', requireAdmin, userRoutes);
-app.use('/api/traffic', trafficLimiter, trackingRoutes);
+app.use('/api/traffic', requireResearchAccess, trafficLimiter, trackingRoutes);
 app.use('/api/enrich', requireAdmin, enrichmentRoutes);
 app.use('/api/crawler', requireAdmin, crawlerRoutes);
 app.use('/api/model', requireAdmin, modelRoutes);
