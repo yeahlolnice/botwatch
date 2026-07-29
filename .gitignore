@@ -27,3 +27,5 @@ node_modules/
 
 # Reference copy of the standalone crawler project — not part of the botwatch codebase
 /Willowbot_Web_Crawler
+# Exported request/tracking data — contains real IPs, never commit
+*.csv

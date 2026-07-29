@@ -49,15 +49,41 @@ export function computeFeatures(a) {
 }
 
 export function labelRow(a) {
+    // An analyst verdict (confirm/deny) always wins over the auto-label — this
+    // is the human-in-the-loop correction that improves the next training run.
+    if (a.verdict === 'malicious') return 1;
+    if (a.verdict === 'benign') return 0;
+
     return Number(a.trap_hits) > 0
         || Number(a.threat_requests) > 0
         || Number(a.max_bot_score) >= MALICIOUS_BOT_SCORE
         ? 1 : 0;
 }
 
-// Ordered numeric vector for a features object — the model's actual input.
+// Ordered numeric vector for a features object — the full 13-feature view.
 export function featureVector(features) {
     return FEATURE_NAMES.map((name) => features[name] ?? 0);
+}
+
+// The features the MODEL trains on. Deliberately excludes the signals that
+// DEFINE the label (trap_ratio, threat_ratio, *_bot_score_norm) — feeding those
+// in would just let the model re-derive the label (leakage). These behavioural
+// features let it flag IPs that *look* malicious before they ever trip a
+// honeypot or a payload signature — which is the whole point of a predictor.
+export const MODEL_FEATURES = [
+    'request_count_log',
+    'path_diversity',
+    'ua_diversity',
+    'ua_missing_ratio',
+    'error_ratio',
+    'non_get_ratio',
+    'with_body_ratio',
+    'method_diversity',
+    'request_rate_log',
+];
+
+export function modelVector(features) {
+    return MODEL_FEATURES.map((name) => features[name] ?? 0);
 }
 
 // The full labelled dataset: one row per IP with its feature object + label.
