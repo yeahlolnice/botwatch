@@ -1,5 +1,5 @@
-<!-- site map for botwatch.xyz public pages -->
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- site map for botwatch.xyz public pages -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://botwatch.xyz/</loc>
@@ -12,6 +12,15 @@
     </url>
     <url>
         <loc>https://botwatch.xyz/willowbot</loc>
+    </url>
+    <url>
+        <loc>https://botwatch.xyz/search</loc>
+    </url>
+    <url>
+        <loc>https://botwatch.xyz/docs</loc>
+    </url>
+    <url>
+        <loc>https://botwatch.xyz/pricing</loc>
     </url>
     <url>
         <loc>https://botwatch.xyz/login</loc>
