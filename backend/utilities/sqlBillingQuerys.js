@@ -58,3 +58,28 @@ export const finalizeBillingOrderQuery = `
 UPDATE billing_order SET status = 'provisioned', api_key_id = $2, updated_at = NOW()
 WHERE session_id = $1;
 `;
+
+// --- subscription lifecycle (webhooks) ---
+// A customer's keys are linked to their subscription via stripe_subscription_id,
+// so a plan change or cancellation can update/revoke exactly those keys.
+
+// On upgrade/downgrade: retier every active key for the subscription.
+export const setKeyTierBySubscriptionQuery = `
+UPDATE api_key SET tier = $1
+WHERE stripe_subscription_id = $2 AND active = TRUE
+RETURNING id;
+`;
+
+// On cancellation: revoke every key for the subscription.
+export const deactivateKeysBySubscriptionQuery = `
+UPDATE api_key SET active = FALSE
+WHERE stripe_subscription_id = $1 AND active = TRUE
+RETURNING id;
+`;
+
+// Keep the order's tier in sync so the account's derived plan stays correct
+// after an in-place (Customer Portal) plan change that skips checkout.
+export const setOrderTierBySubscriptionQuery = `
+UPDATE billing_order SET tier = $1, updated_at = NOW()
+WHERE stripe_subscription_id = $2;
+`;

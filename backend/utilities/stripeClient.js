@@ -38,5 +38,14 @@ export function priceForTier(tier) {
     }[tier] || null;
 }
 
+// Reverse of priceForTier: map a Stripe Price id back to its tier. Used by the
+// subscription webhooks to tell what a customer upgraded/downgraded to.
+export function tierForPrice(priceId) {
+    if (!priceId) return null;
+    if (priceId === process.env.STRIPE_PRICE_PRO) return 'pro';
+    if (priceId === process.env.STRIPE_PRICE_ENTERPRISE) return 'enterprise';
+    return null;
+}
+
 // Tiers that are purchased via Checkout. "free" keys stay admin-issued.
 export const PAID_TIERS = ['pro', 'enterprise'];
