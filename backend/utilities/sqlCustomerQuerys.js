@@ -32,7 +32,7 @@ SELECT id, email, name, password, stripe_customer_id FROM customer WHERE email =
 
 // Never selects the password hash — used for authenticated reads.
 export const getCustomerByIdQuery = `
-SELECT id, email, name, stripe_customer_id, created_at, last_login FROM customer WHERE id = $1;
+SELECT id, email, name, stripe_customer_id, email_verified, created_at, last_login FROM customer WHERE id = $1;
 `;
 
 export const insertCustomerQuery = `
@@ -124,3 +124,40 @@ WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW();
 export const markPasswordResetUsedQuery = `UPDATE password_reset SET used_at = NOW() WHERE id = $1;`;
 
 export const updateCustomerPasswordQuery = `UPDATE customer SET password = $1 WHERE id = $2;`;
+
+// --- email verification (Phase 3.9) ---
+// Same hashed, single-use, expiring-token shape as password reset. Verification
+// is soft: unverified accounts still work, the portal just surfaces the state.
+export const addCustomerEmailVerifiedColumnQuery = `
+ALTER TABLE customer ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+`;
+
+export const createEmailVerificationTableQuery = `
+CREATE TABLE IF NOT EXISTS email_verification (
+    id BIGSERIAL PRIMARY KEY,
+    customer_id BIGINT NOT NULL REFERENCES customer(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`;
+
+export const invalidateEmailVerificationsQuery = `
+UPDATE email_verification SET used_at = NOW()
+WHERE customer_id = $1 AND used_at IS NULL;
+`;
+
+export const insertEmailVerificationQuery = `
+INSERT INTO email_verification (customer_id, token_hash, expires_at)
+VALUES ($1, $2, $3) RETURNING id;
+`;
+
+export const getValidEmailVerificationQuery = `
+SELECT id, customer_id FROM email_verification
+WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW();
+`;
+
+export const markEmailVerificationUsedQuery = `UPDATE email_verification SET used_at = NOW() WHERE id = $1;`;
+
+export const markCustomerVerifiedQuery = `UPDATE customer SET email_verified = TRUE WHERE id = $1;`;

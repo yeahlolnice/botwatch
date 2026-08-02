@@ -15,6 +15,7 @@ import Pricing from './pages/Pricing'
 import BillingSuccess from './pages/BillingSuccess'
 import Account from './pages/Account'
 import ResetPassword from './pages/ResetPassword'
+import VerifyEmail from './pages/VerifyEmail'
 import Report from './pages/Report'
 import Login from './pages/Login'
 import Access from './pages/Access'
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="/billing/success" element={<BillingSuccess />} />
         <Route path="/account" element={<Account />} />
         <Route path="/account/reset" element={<ResetPassword />} />
+        <Route path="/account/verify" element={<VerifyEmail />} />
         <Route
           path="/report"
           element={

@@ -20,6 +20,11 @@ import {
     getValidPasswordResetQuery,
     markPasswordResetUsedQuery,
     updateCustomerPasswordQuery,
+    invalidateEmailVerificationsQuery,
+    insertEmailVerificationQuery,
+    getValidEmailVerificationQuery,
+    markEmailVerificationUsedQuery,
+    markCustomerVerifiedQuery,
 } from '../utilities/sqlCustomerQuerys.js';
 
 const COOKIE_OPTIONS = {
@@ -56,6 +61,26 @@ async function reconcile(customerId, email) {
     }
 }
 
+// Issue an email-verification token and send the verify link. Best-effort — a
+// send failure never blocks signup (verification is soft).
+async function issueEmailVerification(customer, req) {
+    try {
+        const token = crypto.randomBytes(32).toString('base64url');
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+        await query(invalidateEmailVerificationsQuery, [customer.id]);
+        await query(insertEmailVerificationQuery, [customer.id, sha256(token), expires]);
+        const link = `${baseUrl(req)}/account/verify?token=${token}`;
+        await sendEmail({
+            to: customer.email,
+            subject: 'Verify your botwatch email',
+            text: `Confirm your email for botwatch:\n${link}\n\nThis link expires in 24 hours.`,
+            html: `<p>Confirm your email for botwatch:</p><p><a href="${link}">${link}</a></p><p>This link expires in 24 hours.</p>`,
+        });
+    } catch (error) {
+        console.error('issueEmailVerification error:', error.message);
+    }
+}
+
 // The account's entitled tier — from its most recent order, Free if none/invalid.
 async function planFor(customer) {
     const row = (await query(getCustomerPlanQuery, [customer.email, customer.stripe_customer_id || null])).rows[0];
@@ -79,6 +104,7 @@ export const signup = async (req, res) => {
         const hash = await bcrypt.hash(password, 12);
         const c = (await query(insertCustomerQuery, [email, hash, name])).rows[0];
         await reconcile(c.id, email);
+        await issueEmailVerification(c, req);
         res.cookie('auth_token', signToken(c), COOKIE_OPTIONS);
         return res.status(201).json({ customer: { id: c.id, email: c.email, name: c.name } });
     } catch (error) {
@@ -122,7 +148,10 @@ export const getAccount = async (req, res) => {
     try {
         const c = (await query(getCustomerByIdQuery, [req.user.id])).rows[0];
         if (!c) return res.status(404).json({ error: 'Account not found' });
-        return res.json({ customer: { id: c.id, email: c.email, name: c.name }, plan: await planFor(c) });
+        return res.json({
+            customer: { id: c.id, email: c.email, name: c.name, emailVerified: c.email_verified },
+            plan: await planFor(c),
+        });
     } catch (error) {
         console.error('getAccount error:', error.message);
         return res.status(500).json({ error: 'Failed to load account' });
@@ -225,5 +254,36 @@ export const resetPassword = async (req, res) => {
     } catch (error) {
         console.error('resetPassword error:', error.message);
         return res.status(500).json({ error: 'Failed to reset password' });
+    }
+};
+
+// POST /api/account/verify { token } — consume an email-verification token and
+// mark the account verified. Public (reached from the emailed link).
+export const verifyEmail = async (req, res) => {
+    const token = (req.body?.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Missing verification token' });
+    try {
+        const row = (await query(getValidEmailVerificationQuery, [sha256(token)])).rows[0];
+        if (!row) return res.status(400).json({ error: 'This verification link is invalid or has expired' });
+        await query(markCustomerVerifiedQuery, [row.customer_id]);
+        await query(markEmailVerificationUsedQuery, [row.id]);
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error('verifyEmail error:', error.message);
+        return res.status(500).json({ error: 'Failed to verify email' });
+    }
+};
+
+// POST /api/account/resend-verification — re-send the verify link to the logged-in
+// customer (no-op response if already verified).
+export const resendVerification = async (req, res) => {
+    try {
+        const c = (await query(getCustomerByIdQuery, [req.user.id])).rows[0];
+        if (!c) return res.status(404).json({ error: 'Account not found' });
+        if (!c.email_verified) await issueEmailVerification(c, req);
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error('resendVerification error:', error.message);
+        return res.status(500).json({ error: 'Failed to resend verification' });
     }
 };

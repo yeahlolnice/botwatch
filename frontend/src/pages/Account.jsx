@@ -112,6 +112,18 @@ function Portal({ account, onLogout }) {
   const [newKey, setNewKey] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [verifyMsg, setVerifyMsg] = useState('')
+  const verified = account.customer?.emailVerified
+
+  const resendVerify = async () => {
+    setVerifyMsg('Sending…')
+    try {
+      await fetch('/api/account/resend-verification', { method: 'POST', credentials: 'include' })
+      setVerifyMsg('Verification email sent — check your inbox.')
+    } catch {
+      setVerifyMsg('Could not send — try again later.')
+    }
+  }
 
   const loadKeys = useCallback(async () => {
     try {
@@ -156,6 +168,12 @@ function Portal({ account, onLogout }) {
         <div>
           <h1>Your account</h1>
           <p className="acct-email">{account.customer?.email}</p>
+          {verified
+            ? <p className="acct-verified">✓ Email verified</p>
+            : <p className="acct-unverified">
+                Email not verified. <button className="acct-linkbtn" onClick={resendVerify}>Resend link</button>
+                {verifyMsg && <span className="acct-verifymsg"> {verifyMsg}</span>}
+              </p>}
         </div>
         <button className="acct-btn" onClick={onLogout}>Sign out</button>
       </div>
