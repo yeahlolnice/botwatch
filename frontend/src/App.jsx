@@ -14,6 +14,7 @@ import ApiDocs from './pages/ApiDocs'
 import Pricing from './pages/Pricing'
 import BillingSuccess from './pages/BillingSuccess'
 import Account from './pages/Account'
+import ResetPassword from './pages/ResetPassword'
 import Report from './pages/Report'
 import Login from './pages/Login'
 import Access from './pages/Access'
@@ -91,6 +92,7 @@ export default function App() {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/billing/success" element={<BillingSuccess />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/account/reset" element={<ResetPassword />} />
         <Route
           path="/report"
           element={

@@ -90,3 +90,37 @@ UPDATE api_key SET active = FALSE
 WHERE id = $1 AND (owner_customer_id = $2 OR customer_email = $3)
 RETURNING id;
 `;
+
+// --- password reset (Phase 3.8) ---
+// Only a SHA-256 hash of the reset token is stored; the raw token lives only in
+// the emailed link. Tokens are single-use (used_at) and short-lived (expires_at).
+export const createPasswordResetTableQuery = `
+CREATE TABLE IF NOT EXISTS password_reset (
+    id BIGSERIAL PRIMARY KEY,
+    customer_id BIGINT NOT NULL REFERENCES customer(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`;
+
+// Invalidate any outstanding tokens before issuing a new one — one live link.
+export const invalidateCustomerResetsQuery = `
+UPDATE password_reset SET used_at = NOW()
+WHERE customer_id = $1 AND used_at IS NULL;
+`;
+
+export const insertPasswordResetQuery = `
+INSERT INTO password_reset (customer_id, token_hash, expires_at)
+VALUES ($1, $2, $3) RETURNING id;
+`;
+
+export const getValidPasswordResetQuery = `
+SELECT id, customer_id FROM password_reset
+WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW();
+`;
+
+export const markPasswordResetUsedQuery = `UPDATE password_reset SET used_at = NOW() WHERE id = $1;`;
+
+export const updateCustomerPasswordQuery = `UPDATE customer SET password = $1 WHERE id = $2;`;

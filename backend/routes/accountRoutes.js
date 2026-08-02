@@ -5,6 +5,7 @@ import { loginLimiter } from '../middleware/rateLimiter.js';
 import {
     signup, login, logout, me,
     getAccount, listKeys, createKey, revokeKey,
+    forgotPassword, resetPassword,
 } from '../controllers/accountController.js';
 
 // Customer accounts (Phase 3.5). Mounted at /api/account BEFORE the global JWT
@@ -16,6 +17,8 @@ const router = express.Router();
 router.post('/signup', loginLimiter, signup);
 router.post('/login', loginLimiter, login);
 router.post('/logout', logout);
+router.post('/forgot', loginLimiter, forgotPassword);
+router.post('/reset', loginLimiter, resetPassword);
 
 // Authenticated customer portal
 router.get('/me', requireAuth, requireCustomer, me);

@@ -81,6 +81,11 @@
 .acct-docs-link a { color: var(--accent, #2fbfae); }
 
 .acct-error { color: #ef6b6b; font-size: 13px; }
+.acct-notice { color: var(--green, #4ade80); font-size: 13px; }
+.acct-linkbtn {
+  align-self: flex-start; background: none; border: none; padding: 0;
+  color: var(--accent, #2fbfae); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
 
 /* Buttons */
 .acct-btn {
