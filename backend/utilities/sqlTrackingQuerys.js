@@ -98,6 +98,9 @@ INSERT INTO request_tracking (
     $37, $38, $39, $40, $41
 )`;
 
+// NOTE: intentionally does NOT select body / raw_body. Those columns can hold
+// captured request payloads (including failed-login credential attempts) and
+// must never be returned by an API endpoint — inspect them at the DB level only.
 export const getRecentRequestsQuery = `
 SELECT
     id, request_id, timestamp,
@@ -108,7 +111,6 @@ SELECT
     bot_label, crawler_type, bot_score,
     is_trap, trap_type,
     threat_signals,
-    body, raw_body, raw_body_bytes, raw_body_truncated,
     accept_language, sec_fetch_site, sec_fetch_mode
 FROM request_tracking
 ORDER BY timestamp DESC

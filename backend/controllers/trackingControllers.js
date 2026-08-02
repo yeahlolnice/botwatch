@@ -45,6 +45,21 @@ const trackRequest = (req, res, next) => {
             const { method, query: queryParams, headers, body } = req;
             // req.path strips the mount prefix (e.g. /api/traffic → /); originalUrl preserves it
             const path = req.originalUrl.split('?')[0];
+
+            // --- Auth-endpoint credential handling ---
+            // A FAILED login attempt is kept in full: an attacker's guessed
+            // password is threat intel worth studying. But we never persist a
+            // legitimate user's credentials:
+            //   • a successful login/signup (2xx) is not recorded at all
+            //   • signup bodies are always stripped — a failed signup is a real
+            //     person (e.g. wrong password / email taken), not credential
+            //     stuffing, so only the login endpoints keep failed-attempt bodies
+            // Stored bodies are never exposed by any API endpoint — inspect them
+            // at the database level only.
+            const LOGIN_PATHS = ['/api/auth/login', '/api/account/login'];
+            const isAuthAttempt = LOGIN_PATHS.includes(path) || path === '/api/account/signup';
+            if (isAuthAttempt && res.statusCode >= 200 && res.statusCode < 300) return;
+            const stripCredentials = path === '/api/account/signup';
             const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
 
             // IP resolution — CF-Connecting-IP is the verified real client IP
@@ -92,16 +107,16 @@ const trackRequest = (req, res, next) => {
             // Parsed body only when it's a JSON/form object or a string — never a
             // raw Buffer (unparsed content types arrive as a Buffer and are
             // captured verbatim in raw_body instead).
-            const parsedBody = body && !Buffer.isBuffer(body)
+            const parsedBody = !stripCredentials && body && !Buffer.isBuffer(body)
                 && (typeof body === 'string' ? body.length : Object.keys(body).length)
                 ? JSON.stringify(body) : null;
 
             // Verbatim raw body — captured in server.js for EVERY content type,
             // capped and flagged there. This is the ground truth of exactly what
             // was sent, which is where novel/odd exploit payloads show up.
-            const rawBody = req.rawBody || null;
-            const rawBodyBytes = req.rawBodyBytes ?? null;
-            const rawBodyTruncated = req.rawBodyTruncated ?? false;
+            const rawBody = stripCredentials ? null : (req.rawBody || null);
+            const rawBodyBytes = stripCredentials ? null : (req.rawBodyBytes ?? null);
+            const rawBodyTruncated = stripCredentials ? false : (req.rawBodyTruncated ?? false);
 
             await query(insertRequestQuery, [
                 method, path, fullUrl,
