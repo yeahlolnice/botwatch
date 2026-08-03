@@ -46,6 +46,7 @@ function AuthCard({ onAuthed }) {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Something went wrong')
+      window.dispatchEvent(new Event('auth-changed')) // let the nav update immediately
       onAuthed()
     } catch (e) {
       setError(e.message)
@@ -254,6 +255,7 @@ export default function Account() {
   const logout = async () => {
     try { await fetch('/api/account/logout', { method: 'POST', credentials: 'include' }) } catch { /* ignore */ }
     setState({ status: 'anon' })
+    window.dispatchEvent(new Event('auth-changed')) // nav reflects sign-out immediately
   }
 
   if (state.status === 'loading') return <main className="acct-page" />

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Intel from './pages/Intel'
@@ -27,12 +27,21 @@ function Nav() {
   const [user, setUser] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  useEffect(() => {
+  const loadUser = useCallback(() => {
     fetch('/api/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(j => setUser(j?.user || null))
       .catch(() => setUser(null))
-  }, [pathname])
+  }, [])
+
+  // Refresh on route change, and whenever an auth action fires an 'auth-changed'
+  // event (e.g. a customer signing in/out in-place on /account, which doesn't
+  // change the URL and so wouldn't otherwise update the nav).
+  useEffect(() => { loadUser() }, [pathname, loadUser])
+  useEffect(() => {
+    window.addEventListener('auth-changed', loadUser)
+    return () => window.removeEventListener('auth-changed', loadUser)
+  }, [loadUser])
 
   // Collapse the mobile/tablet menu whenever the route changes.
   useEffect(() => {
@@ -69,13 +78,26 @@ function Nav() {
         {isAdmin && <Link to="/admin/model" className={pathname === '/admin/model' ? 'active' : ''}>Model</Link>}
         {isAdmin && <Link to="/admin/keys" className={pathname === '/admin/keys' ? 'active' : ''}>API Keys</Link>}
         {isAdmin && <Link to="/admin/settings" className={pathname === '/admin/settings' ? 'active' : ''}>Settings</Link>}
-        {!isResearch && <Link to="/account" className={pathname === '/account' ? 'active' : ''}>Account</Link>}
+        {isCustomer && <Link to="/account" className={pathname === '/account' ? 'active' : ''}>Account</Link>}
         {authed
-          ? <button className="nav-signout" onClick={() => { const url = isCustomer ? '/api/account/logout' : '/api/auth/logout'; fetch(url, { method: 'POST', credentials: 'include' }).then(() => setUser(null)); setMenuOpen(false) }}>Sign out</button>
-          : <Link to="/login" className={pathname === '/login' ? 'active' : ''}>Sign in</Link>
+          ? <button className="nav-signout" onClick={() => { const url = isCustomer ? '/api/account/logout' : '/api/auth/logout'; fetch(url, { method: 'POST', credentials: 'include' }).then(() => { setUser(null); window.dispatchEvent(new Event('auth-changed')) }); setMenuOpen(false) }}>Sign out</button>
+          : <Link to="/account" className={pathname === '/account' ? 'active' : ''}>Sign in</Link>
         }
       </div>
     </nav>
+  )
+}
+
+// Site footer. Holds the discreet staff/admin sign-in so customers aren't sent
+// to the admin login from the main nav. Hidden on the login page itself.
+function Footer() {
+  const { pathname } = useLocation()
+  if (pathname === '/login') return null
+  return (
+    <footer className="site-footer">
+      <span className="site-footer-copy">© {new Date().getFullYear()} botwatch.xyz</span>
+      <Link to="/login" className="site-footer-staff">Staff sign in</Link>
+    </footer>
   )
 }
 
@@ -146,6 +168,7 @@ export default function App() {
           }
         />
       </Routes>
+      <Footer />
     </BrowserRouter>
   )
 }
