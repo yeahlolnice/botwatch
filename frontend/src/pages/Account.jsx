@@ -16,12 +16,26 @@ function AuthCard({ onAuthed }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const isForgot = mode === 'forgot'
+
+  const switchMode = (m) => { setMode(m); setError(''); setNotice('') }
 
   const submit = async (e) => {
     e.preventDefault()
-    setError(''); setBusy(true)
+    setError(''); setNotice(''); setBusy(true)
     try {
+      if (isForgot) {
+        const res = await fetch('/api/account/forgot', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        const data = await res.json().catch(() => ({}))
+        setNotice(data.message || 'If that email has an account, a reset link is on its way.')
+        return
+      }
       const path = mode === 'signup' ? '/api/account/signup' : '/api/account/login'
       const body = mode === 'signup' ? { name, email, password } : { email, password }
       const res = await fetch(path, {
@@ -32,6 +46,7 @@ function AuthCard({ onAuthed }) {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Something went wrong')
+      window.dispatchEvent(new Event('auth-changed')) // let the nav update immediately
       onAuthed()
     } catch (e) {
       setError(e.message)
@@ -40,15 +55,17 @@ function AuthCard({ onAuthed }) {
     }
   }
 
+  const copy = {
+    login: ['Welcome back', 'Sign in to manage your API keys and subscription.'],
+    signup: ['Create your account', 'Sign up to manage your API keys and subscription.'],
+    forgot: ['Reset your password', "Enter your account email and we'll send a reset link."],
+  }[mode]
+
   return (
     <div className="acct-authwrap">
       <div className="acct-auth">
-        <h1>{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h1>
-        <p className="acct-auth-sub">
-          {mode === 'signup'
-            ? 'Sign up to manage your API keys and subscription.'
-            : 'Sign in to manage your API keys and subscription.'}
-        </p>
+        <h1>{copy[0]}</h1>
+        <p className="acct-auth-sub">{copy[1]}</p>
         <form onSubmit={submit} className="acct-form">
           {mode === 'signup' && (
             <label>Name <span>(optional)</span>
@@ -58,25 +75,29 @@ function AuthCard({ onAuthed }) {
           <label>Email
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
           </label>
-          <label>Password
-            <input
-              type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              required minLength={8}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            />
-          </label>
+          {!isForgot && (
+            <label>Password
+              <input
+                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                required minLength={8}
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              />
+            </label>
+          )}
           {mode === 'signup' && <p className="acct-hint">At least 8 characters.</p>}
+          {mode === 'login' && (
+            <button type="button" className="acct-linkbtn" onClick={() => switchMode('forgot')}>Forgot password?</button>
+          )}
           {error && <p className="acct-error">{error}</p>}
+          {notice && <p className="acct-notice">{notice}</p>}
           <button type="submit" className="acct-btn acct-btn--primary" disabled={busy}>
-            {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
+            {busy ? 'Please wait…' : isForgot ? 'Send reset link' : mode === 'signup' ? 'Create account' : 'Sign in'}
           </button>
         </form>
         <p className="acct-switch">
-          {mode === 'signup' ? (
-            <>Already have an account? <button onClick={() => { setMode('login'); setError('') }}>Sign in</button></>
-          ) : (
-            <>New here? <button onClick={() => { setMode('signup'); setError('') }}>Create an account</button></>
-          )}
+          {mode === 'signup' && <>Already have an account? <button onClick={() => switchMode('login')}>Sign in</button></>}
+          {mode === 'login' && <>New here? <button onClick={() => switchMode('signup')}>Create an account</button></>}
+          {mode === 'forgot' && <>Remembered it? <button onClick={() => switchMode('login')}>Back to sign in</button></>}
         </p>
         <p className="acct-switch acct-switch--muted">
           Looking for the <Link to="/pricing">plans and pricing</Link>?
@@ -92,6 +113,18 @@ function Portal({ account, onLogout }) {
   const [newKey, setNewKey] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [verifyMsg, setVerifyMsg] = useState('')
+  const verified = account.customer?.emailVerified
+
+  const resendVerify = async () => {
+    setVerifyMsg('Sending…')
+    try {
+      await fetch('/api/account/resend-verification', { method: 'POST', credentials: 'include' })
+      setVerifyMsg('Verification email sent — check your inbox.')
+    } catch {
+      setVerifyMsg('Could not send — try again later.')
+    }
+  }
 
   const loadKeys = useCallback(async () => {
     try {
@@ -136,6 +169,12 @@ function Portal({ account, onLogout }) {
         <div>
           <h1>Your account</h1>
           <p className="acct-email">{account.customer?.email}</p>
+          {verified
+            ? <p className="acct-verified">✓ Email verified</p>
+            : <p className="acct-unverified">
+                Email not verified. <button className="acct-linkbtn" onClick={resendVerify}>Resend link</button>
+                {verifyMsg && <span className="acct-verifymsg"> {verifyMsg}</span>}
+              </p>}
         </div>
         <button className="acct-btn" onClick={onLogout}>Sign out</button>
       </div>
@@ -216,6 +255,7 @@ export default function Account() {
   const logout = async () => {
     try { await fetch('/api/account/logout', { method: 'POST', credentials: 'include' }) } catch { /* ignore */ }
     setState({ status: 'anon' })
+    window.dispatchEvent(new Event('auth-changed')) // nav reflects sign-out immediately
   }
 
   if (state.status === 'loading') return <main className="acct-page" />

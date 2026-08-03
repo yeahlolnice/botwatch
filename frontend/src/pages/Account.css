@@ -31,6 +31,9 @@
 .acct-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .acct-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.6px; color: var(--text); }
 .acct-email { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+.acct-verified { font-size: 12.5px; color: var(--green, #4ade80); margin-top: 5px; font-weight: 600; }
+.acct-unverified { font-size: 12.5px; color: var(--text-dim); margin-top: 5px; }
+.acct-verifymsg { color: var(--accent, #2fbfae); }
 
 .acct-plan {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -81,6 +84,11 @@
 .acct-docs-link a { color: var(--accent, #2fbfae); }
 
 .acct-error { color: #ef6b6b; font-size: 13px; }
+.acct-notice { color: var(--green, #4ade80); font-size: 13px; }
+.acct-linkbtn {
+  align-self: flex-start; background: none; border: none; padding: 0;
+  color: var(--accent, #2fbfae); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
 
 /* Buttons */
 .acct-btn {
