@@ -7,8 +7,11 @@ import {
     getBillingOrderQuery,
     claimBillingOrderQuery,
     finalizeBillingOrderQuery,
+    setKeyTierBySubscriptionQuery,
+    deactivateKeysBySubscriptionQuery,
+    setOrderTierBySubscriptionQuery,
 } from '../utilities/sqlBillingQuerys.js';
-import { getStripe, isBillingConfigured, priceForTier, PAID_TIERS } from '../utilities/stripeClient.js';
+import { getStripe, isBillingConfigured, priceForTier, tierForPrice, PAID_TIERS } from '../utilities/stripeClient.js';
 
 // GET /api/billing/config — tells the frontend whether billing is live and which
 // tiers are actually purchasable (a tier is purchasable only once its Price id is
@@ -105,9 +108,23 @@ export const handleWebhook = async (req, res) => {
                 s.customer_details?.email || s.customer_email || null,
                 s.metadata?.tier || 'pro',
             ]);
+        } else if (event.type === 'customer.subscription.updated') {
+            // Plan change (upgrade/downgrade) or lapse. Retier the linked keys to
+            // match the subscription's current price while it's still active;
+            // if it's no longer in an active state, revoke them.
+            const sub = event.data.object;
+            const tier = tierForPrice(sub.items?.data?.[0]?.price?.id);
+            const active = ['active', 'trialing', 'past_due'].includes(sub.status);
+            if (active && tier) {
+                await query(setKeyTierBySubscriptionQuery, [tier, sub.id]);
+                await query(setOrderTierBySubscriptionQuery, [tier, sub.id]);
+            } else if (!active) {
+                await query(deactivateKeysBySubscriptionQuery, [sub.id]);
+            }
+        } else if (event.type === 'customer.subscription.deleted') {
+            // Cancellation — revoke every key tied to the subscription.
+            await query(deactivateKeysBySubscriptionQuery, [event.data.object.id]);
         }
-        // Future: subscription.updated / .deleted -> flip the linked key's tier or
-        // revoke it. Left as a clearly-marked extension point for Phase 3.5.
         return res.json({ received: true });
     } catch (error) {
         console.error('Webhook handling error:', error.message);

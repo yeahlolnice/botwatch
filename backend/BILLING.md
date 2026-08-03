@@ -14,9 +14,14 @@ and it goes live — no code changes needed.
    (`price_…`) into `STRIPE_PRICE_PRO` / `STRIPE_PRICE_ENTERPRISE`.
 3. **Copy your Secret key** (Developers → API keys) into `STRIPE_SECRET_KEY`.
 4. **Add a webhook** (Developers → Webhooks) pointing to
-   `https://botwatch.xyz/api/billing/webhook`, subscribed to the
-   **`checkout.session.completed`** event. Copy its **Signing secret**
-   (`whsec_…`) into `STRIPE_WEBHOOK_SECRET`.
+   `https://botwatch.xyz/api/billing/webhook`, subscribed to these events:
+   - **`checkout.session.completed`** — provisions the key after payment.
+   - **`customer.subscription.updated`** — on upgrade/downgrade, retiers the
+     customer's keys; if the subscription lapses, revokes them.
+   - **`customer.subscription.deleted`** — on cancellation, revokes the
+     customer's keys.
+
+   Copy the webhook's **Signing secret** (`whsec_…`) into `STRIPE_WEBHOOK_SECRET`.
 5. Restart the backend. Done.
 
 Local testing without a public URL: `stripe listen --forward-to
