@@ -14,6 +14,7 @@ import {
     markPageAsCrawled,
     markPageAsSkipped,
     updatePageAiReadiness,
+    updatePageWebmcp,
     updatePageContent,
     updateDomainProfile,
     ensureLink,
@@ -81,9 +82,11 @@ export async function crawlPage(rawUrl) {
         metaDescription,
         metaGenerator,
         scriptSrcs,
+        webmcp,
     } = parsePage(fetchResult.html);
 
     await updatePageAiReadiness(page.id, jsonLdResult);
+    await updatePageWebmcp(page.id, webmcp);
 
     const techStack = detectTechStack({
         html: fetchResult.html,

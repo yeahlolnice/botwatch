@@ -13,6 +13,7 @@ import {
     addDomainProfileColumnsQuery,
     addDomainRootDomainIndexQuery,
     addPageContentColumnsQuery,
+    addPageWebmcpColumnQuery,
     addDomainPriorityColumnQuery,
 } from './sqlCrawlerQuerys.js';
 import { createEnrichmentTableQuery } from './sqlEnrichmentQuerys.js';
@@ -46,6 +47,7 @@ const MIGRATIONS = [
     ['domain profile columns', addDomainProfileColumnsQuery],
     ['domain root_domain index', addDomainRootDomainIndexQuery],
     ['page content columns', addPageContentColumnsQuery],
+    ['page webmcp column', addPageWebmcpColumnQuery],
     ['domain priority column', addDomainPriorityColumnQuery],
     ['ip_enrichment table', createEnrichmentTableQuery],
     ['ip_enrichment abuse_reports', 'ALTER TABLE ip_enrichment ADD COLUMN IF NOT EXISTS abuse_reports JSONB'],
