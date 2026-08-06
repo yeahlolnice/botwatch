@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { detectWebMCP } from './webmcpDetector.js';
 
 // Parses the page HTML once and runs every extractor against the same
 // cheerio tree — loading cheerio repeatedly on the same HTML (one call per
@@ -15,6 +16,7 @@ export function parsePage(html) {
         metaDescription: extractMetaDescription($),
         metaGenerator: extractMetaGenerator($),
         scriptSrcs: extractScriptSrcs($),
+        webmcp: detectWebMCP($, html),
     };
 }
 

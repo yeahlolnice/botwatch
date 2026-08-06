@@ -62,6 +62,12 @@ ALTER TABLE pages
   ADD COLUMN IF NOT EXISTS json_ld_count INTEGER;
 `;
 
+// WebMCP detection result per page (agent-actionability signal). See
+// crawler/webmcpDetector.js.
+export const addPageWebmcpColumnQuery = `
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS webmcp JSONB;
+`;
+
 // Site-profile columns: contacts, socials, category, tech stack, AI-training
 // policy, T&C link, subdomain grouping, and an overall AI-readiness score.
 export const addDomainProfileColumnsQuery = `
@@ -285,6 +291,10 @@ UPDATE pages
 SET json_ld_found = $2, json_ld_types = $3, json_ld_count = $4
 WHERE id = $1
 RETURNING *;
+`;
+
+export const updatePageWebmcpQuery = `
+UPDATE pages SET webmcp = $2 WHERE id = $1 RETURNING id;
 `;
 
 export const getPageReadinessCountsQuery = `

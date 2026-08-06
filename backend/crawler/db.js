@@ -36,6 +36,7 @@ import {
     getNextQueuedPageForDomainQuery,
     countPagesForDomainQuery,
     updatePageAiReadinessQuery,
+    updatePageWebmcpQuery,
     getPageReadinessCountsQuery,
     getPageStatusCountsQuery,
     updatePageContentQuery,
@@ -202,6 +203,11 @@ export async function getNextQueuedPageForDomain(domainId) {
 export async function countPagesForDomain(domainId) {
     const result = await query(countPagesForDomainQuery, [domainId]);
     return result.rows[0].count;
+}
+
+export async function updatePageWebmcp(pageId, webmcp) {
+    const result = await query(updatePageWebmcpQuery, [pageId, webmcp ? JSON.stringify(webmcp) : null]);
+    return result.rows[0];
 }
 
 export async function updatePageAiReadiness(pageId, { found, types, count }) {
