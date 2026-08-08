@@ -36,7 +36,7 @@ import {
     addCustomerEmailVerifiedColumnQuery,
     createEmailVerificationTableQuery,
 } from './sqlCustomerQuerys.js';
-import { createReportOrderTableQuery } from './sqlReadinessQuerys.js';
+import { createReportOrderTableQuery, addReportDataColumnQuery } from './sqlReadinessQuerys.js';
 
 // Every schema statement is idempotent (CREATE TABLE / ADD COLUMN / CREATE INDEX
 // IF NOT EXISTS), so it's safe to run them on every boot. This is what makes a
@@ -73,6 +73,7 @@ const MIGRATIONS = [
     ['customer email_verified column', addCustomerEmailVerifiedColumnQuery],
     ['email_verification table', createEmailVerificationTableQuery],
     ['report_order table', createReportOrderTableQuery],
+    ['report_order report_data column', addReportDataColumnQuery],
 ];
 
 // Runs all migrations, isolating each so one failure never stops the rest and
