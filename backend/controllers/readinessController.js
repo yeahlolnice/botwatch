@@ -68,7 +68,13 @@ export const createReportCheckout = async (req, res) => {
                 price_data: {
                     currency: 'aud',
                     unit_amount: REPORT_PRICE_CENTS,
-                    product_data: { name: `AI-readiness report — ${parsed.hostname}` },
+                    product_data: {
+                        name: `AI-readiness report — ${parsed.hostname}`,
+                        // Required by Stripe Managed Payments for inline prices so
+                        // Stripe handles tax. "General - Electronically Supplied
+                        // Services" fits a digital report delivered by email.
+                        tax_code: 'txcd_10000000',
+                    },
                 },
             }],
             customer_email: email,
