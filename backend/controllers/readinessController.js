@@ -63,16 +63,18 @@ export const createReportCheckout = async (req, res) => {
         const base = baseUrl(req);
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
-            // Managed Payments (on by default) requires a product tax_code for
-            // inline price_data. We use a one-off inline price, so disable it for
-            // this session (the merchant handles tax) rather than force a tax code.
-            managed_payments: { enabled: false },
             line_items: [{
                 quantity: 1,
                 price_data: {
                     currency: 'aud',
                     unit_amount: REPORT_PRICE_CENTS,
-                    product_data: { name: `AI-readiness report — ${parsed.hostname}` },
+                    product_data: {
+                        name: `AI-readiness report — ${parsed.hostname}`,
+                        // Required by Stripe Managed Payments for inline prices so
+                        // Stripe handles tax. "General - Electronically Supplied
+                        // Services" fits a digital report delivered by email.
+                        tax_code: 'txcd_10000000',
+                    },
                 },
             }],
             customer_email: email,
