@@ -2,7 +2,7 @@ import { quickReadinessScan } from '../crawler/quickScan.js';
 import { parseUrlParts } from '../crawler/urlUtils.js';
 import { getStripe } from '../utilities/stripeClient.js';
 import { query } from '../utilities/connectDB.js';
-import { insertReportOrderQuery } from '../utilities/sqlReadinessQuerys.js';
+import { insertReportOrderQuery, getReportByTokenQuery } from '../utilities/sqlReadinessQuerys.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REPORT_PRICE_CENTS = 500; // $5.00 AUD
@@ -87,5 +87,20 @@ export const createReportCheckout = async (req, res) => {
     } catch (error) {
         console.error('Report checkout error:', error.message);
         return res.status(500).json({ error: 'Could not start checkout' });
+    }
+};
+
+// GET /api/readiness/report/:token — the hosted full report, gated by the
+// unguessable token from the delivery email. Public.
+export const getReport = async (req, res) => {
+    const token = (req.params.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Missing report token' });
+    try {
+        const row = (await query(getReportByTokenQuery, [token])).rows[0];
+        if (!row) return res.status(404).json({ error: 'Report not found' });
+        return res.json({ hostname: row.hostname, generatedAt: row.updated_at, report: row.report_data });
+    } catch (error) {
+        console.error('getReport error:', error.message);
+        return res.status(500).json({ error: 'Failed to load report' });
     }
 };

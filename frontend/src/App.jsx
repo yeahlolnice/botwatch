@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Intel from './pages/Intel'
 import Readiness from './pages/Readiness'
 import ReadinessCheck from './pages/ReadinessCheck'
+import ReadinessReport from './pages/ReadinessReport'
 import Willowbot from './pages/Willowbot'
 import SiteSearch from './pages/SiteSearch'
 import CrawlerAdmin from './pages/CrawlerAdmin'
@@ -111,6 +112,7 @@ export default function App() {
         <Route path="/intel" element={<Intel />} />
         <Route path="/readiness" element={<Readiness />} />
         <Route path="/readiness-check" element={<ReadinessCheck />} />
+        <Route path="/readiness-report/:token" element={<ReadinessReport />} />
         <Route path="/willowbot" element={<Willowbot />} />
         <Route path="/search" element={<SiteSearch />} />
         <Route path="/docs" element={<ApiDocs />} />

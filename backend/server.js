@@ -26,6 +26,7 @@ import { requireAdmin } from './middleware/requireAdmin.js';
 import { requireResearchAccess } from './middleware/requireResearchAccess.js';
 import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 import { runMigrations } from './utilities/runMigrations.js';
+import { startReportWorker } from './readiness/reportWorker.js';
 
 dotenv.config();
 
@@ -148,4 +149,6 @@ app.listen(PORT, async () => {
     // a deploy is just "pull + restart" and a forgotten migration can't silently
     // break tracking again.
     await runMigrations();
+    // Start the paid-report fulfillment poller (crawl → generate → email).
+    startReportWorker();
 });
