@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import './ReadinessCheck.css'
 
@@ -60,14 +60,13 @@ export default function ReadinessCheck() {
     }
   }
 
-  const scan = async (e) => {
-    e.preventDefault()
+  const runScan = async (targetUrl) => {
     setError(''); setResult(null); setBusy(true)
     try {
       const res = await fetch('/api/readiness/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: targetUrl }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Could not scan that site')
@@ -78,6 +77,16 @@ export default function ReadinessCheck() {
       setBusy(false)
     }
   }
+
+  const scan = (e) => { e.preventDefault(); runScan(url) }
+
+  // Deep-linked from a company profile page (/readiness-check?url=…): prefill
+  // and auto-scan so the visitor lands on their results, ready to buy.
+  useEffect(() => {
+    const u = searchParams.get('url')
+    if (u) { setUrl(u); runScan(u) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <main className="rc-page">
