@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import './ReadinessCheck.css'
 
 // Public AI-readiness checker + funnel entry. Free teaser (real signals), then a
@@ -36,6 +36,29 @@ export default function ReadinessCheck() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showBuy, setShowBuy] = useState(false)
+  const [reportEmail, setReportEmail] = useState('')
+  const [buying, setBuying] = useState(false)
+  const [buyError, setBuyError] = useState('')
+  const [searchParams] = useSearchParams()
+  const paid = searchParams.get('report') === 'success'
+
+  const buyReport = async (e) => {
+    e.preventDefault()
+    setBuyError(''); setBuying(true)
+    try {
+      const res = await fetch('/api/readiness/report/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, email: reportEmail }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.url) throw new Error(data.error || 'Could not start checkout')
+      window.location.href = data.url // hand off to Stripe Checkout
+    } catch (e) {
+      setBuyError(e.message); setBuying(false)
+    }
+  }
 
   const scan = async (e) => {
     e.preventDefault()
@@ -58,6 +81,11 @@ export default function ReadinessCheck() {
 
   return (
     <main className="rc-page">
+      {paid && (
+        <div className="rc-paid">
+          <strong>Payment received 🎉</strong> — your AI-readiness report is being generated and will be emailed to you shortly.
+        </div>
+      )}
       <section className="rc-hero">
         <span className="rc-eyebrow">AI Readiness Check</span>
         <h1>Is your site ready for AI agents?</h1>
@@ -117,12 +145,27 @@ export default function ReadinessCheck() {
               to become AI-ready — emailed to you.
             </p>
             <div className="rc-price">$5 <span>AUD · one-time</span></div>
-            <button className="rc-btn rc-btn--primary rc-btn--lg" onClick={() => setResult({ ...result, _comingSoon: true })}>
-              Get the full report
-            </button>
-            {result._comingSoon && (
-              <p className="rc-soon">Paid reports are launching shortly — checkout is being finalised. Check back soon!</p>
+            {!showBuy ? (
+              <button className="rc-btn rc-btn--primary rc-btn--lg" onClick={() => setShowBuy(true)}>
+                Get the full report
+              </button>
+            ) : (
+              <form className="rc-buy" onSubmit={buyReport}>
+                <input
+                  className="rc-input"
+                  type="email"
+                  placeholder="you@company.com"
+                  value={reportEmail}
+                  onChange={(e) => setReportEmail(e.target.value)}
+                  required
+                />
+                <button className="rc-btn rc-btn--primary rc-btn--lg" type="submit" disabled={buying}>
+                  {buying ? 'Redirecting…' : 'Pay $5 AUD'}
+                </button>
+              </form>
             )}
+            <p className="rc-buy-note">We'll email your report to this address once it's generated.</p>
+            {buyError && <p className="rc-error">{buyError}</p>}
           </div>
         </section>
       )}
