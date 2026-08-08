@@ -63,6 +63,10 @@ export const createReportCheckout = async (req, res) => {
         const base = baseUrl(req);
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
+            // Managed Payments (on by default) requires a product tax_code for
+            // inline price_data. We use a one-off inline price, so disable it for
+            // this session (the merchant handles tax) rather than force a tax code.
+            managed_payments: { enabled: false },
             line_items: [{
                 quantity: 1,
                 price_data: {
