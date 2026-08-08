@@ -1,0 +1,86 @@
+.rc-page { max-width: 920px; margin: 0 auto; padding: 40px 24px 90px; }
+
+/* Hero */
+.rc-hero { text-align: center; margin-bottom: 32px; }
+.rc-eyebrow {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--accent, #2fbfae); margin-bottom: 12px;
+}
+.rc-hero h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.8px; color: var(--text); margin-bottom: 12px; }
+.rc-hero p { font-size: 15px; line-height: 1.65; color: var(--text-dim); max-width: 62ch; margin: 0 auto 22px; }
+.rc-hero p a, .rc-explainer a { color: var(--accent, #2fbfae); }
+
+.rc-form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.rc-input {
+  flex: 1; min-width: 260px; max-width: 420px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 15px;
+}
+
+.rc-btn {
+  border: 1px solid var(--border); background: var(--surface2, rgba(255,255,255,0.04));
+  color: var(--text); border-radius: 10px; padding: 12px 20px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.rc-btn--primary { background: var(--accent, #2fbfae); border-color: transparent; color: #06231f; }
+.rc-btn--lg { padding: 13px 28px; font-size: 15px; }
+.rc-btn:disabled { opacity: 0.5; cursor: default; }
+.rc-error { color: #ef6b6b; font-size: 14px; margin-top: 14px; }
+
+/* Results */
+.rc-results { margin: 34px 0; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.rc-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 20px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.rc-summary-host { font-size: 18px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+.rc-warn { font-size: 12.5px; color: var(--yellow, #eab308); margin-top: 4px; }
+
+.rc-band {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase;
+  padding: 7px 16px; border-radius: 20px; white-space: nowrap;
+}
+.rc-band--emerging { background: color-mix(in srgb, #ef4444 18%, transparent); color: #f19999; }
+.rc-band--developing { background: color-mix(in srgb, #eab308 20%, transparent); color: #e3c675; }
+.rc-band--strong { background: color-mix(in srgb, #4ade80 18%, transparent); color: #86efac; }
+
+.rc-pillars { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+.rc-pillar { padding: 22px 24px; background: var(--bg, #0b0f10); }
+.rc-pillar-head { display: flex; align-items: baseline; justify-content: space-between; }
+.rc-pillar-head h3 { font-size: 15px; font-weight: 700; color: var(--text); }
+.rc-pillar-score { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--accent, #2fbfae); }
+.rc-pillar-sub { font-size: 12.5px; color: var(--text-dim); margin: 4px 0 14px; }
+.rc-signals { list-style: none; margin: 0; padding: 0; }
+.rc-signals li { font-size: 13.5px; padding: 6px 0; display: flex; align-items: center; gap: 9px; }
+.rc-mark { font-weight: 800; width: 14px; display: inline-block; text-align: center; }
+.rc-yes { color: var(--text); }
+.rc-yes .rc-mark { color: var(--green, #4ade80); }
+.rc-no { color: var(--text-dim); }
+.rc-no .rc-mark { color: #ef6b6b; }
+
+/* Upsell */
+.rc-upsell {
+  padding: 26px 24px; text-align: center;
+  background: color-mix(in srgb, var(--accent, #2fbfae) 9%, var(--surface));
+  border-top: 1px solid var(--border);
+}
+.rc-upsell h2 { font-size: 21px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.rc-upsell p { font-size: 14px; line-height: 1.6; color: var(--text-dim); max-width: 60ch; margin: 0 auto 14px; }
+.rc-upsell strong { color: var(--text); }
+.rc-price { font-size: 30px; font-weight: 800; color: var(--text); margin-bottom: 14px; letter-spacing: -0.5px; }
+.rc-price span { font-size: 13px; font-weight: 500; color: var(--text-dim); letter-spacing: 0; }
+.rc-soon { margin-top: 14px; font-size: 13px; color: var(--accent, #2fbfae); }
+
+/* Explainer / SEO content */
+.rc-explainer { margin-top: 20px; }
+.rc-explainer h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 18px; text-align: center; }
+.rc-explainer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.rc-explainer-grid h3 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.rc-explainer-grid p { font-size: 13.5px; line-height: 1.6; color: var(--text-dim); }
+.rc-explainer-grid code { font-family: var(--mono); font-size: 12.5px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
+.rc-explainer-foot { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 22px; }
+
+@media (max-width: 620px) {
+  .rc-hero h1 { font-size: 27px; }
+  .rc-pillars, .rc-explainer-grid { grid-template-columns: 1fr; }
+}

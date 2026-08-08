@@ -19,6 +19,7 @@ import apiKeyRoutes from './routes/apiKeyRoutes.js';
 import v1Routes from './routes/v1Routes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import accountRoutes from './routes/accountRoutes.js';
+import readinessRoutes from './routes/readinessRoutes.js';
 import { trackRequest } from './controllers/trackingControllers.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
@@ -109,6 +110,9 @@ app.use('/api/billing', billingRoutes);
 // Customer accounts — signup/login are public; the portal routes gate themselves
 // with requireAuth + requireCustomer. Mounted before the admin JWT gate.
 app.use('/api/account', accountRoutes);
+
+// Public AI-readiness checker (free teaser) — no auth, own rate limiter.
+app.use('/api/readiness', readinessRoutes);
 
 // All other /api/* routes require a valid JWT cookie
 app.use('/api', requireAuth);

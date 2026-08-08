@@ -40,6 +40,7 @@ export default function Readiness() {
         <div>
           <h1>AI Readiness</h1>
           <p>How prepared the crawled web is for AI agents — llms.txt adoption and structured (JSON-LD) data, tracked over time.</p>
+          <Link to="/readiness-check" className="readiness-check-cta">Check your own site → </Link>
         </div>
         <span className="readiness-pulse"><span className="pulse-dot" />Live</span>
       </div>
