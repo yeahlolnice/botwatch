@@ -11,6 +11,7 @@ import {
     deactivateKeysBySubscriptionQuery,
     setOrderTierBySubscriptionQuery,
 } from '../utilities/sqlBillingQuerys.js';
+import { markReportOrderPaidQuery } from '../utilities/sqlReadinessQuerys.js';
 import { getStripe, isBillingConfigured, priceForTier, tierForPrice, PAID_TIERS } from '../utilities/stripeClient.js';
 
 // GET /api/billing/config — tells the frontend whether billing is live and which
@@ -101,13 +102,18 @@ export const handleWebhook = async (req, res) => {
     try {
         if (event.type === 'checkout.session.completed') {
             const s = event.data.object;
-            await query(upsertBillingOrderQuery, [
-                s.id,
-                s.customer || null,
-                s.subscription || null,
-                s.customer_details?.email || s.customer_email || null,
-                s.metadata?.tier || 'pro',
-            ]);
+            if (s.metadata?.kind === 'readiness_report') {
+                // One-time $5 readiness-report purchase (not a subscription).
+                await query(markReportOrderPaidQuery, [s.id]);
+            } else {
+                await query(upsertBillingOrderQuery, [
+                    s.id,
+                    s.customer || null,
+                    s.subscription || null,
+                    s.customer_details?.email || s.customer_email || null,
+                    s.metadata?.tier || 'pro',
+                ]);
+            }
         } else if (event.type === 'customer.subscription.updated') {
             // Plan change (upgrade/downgrade) or lapse. Retier the linked keys to
             // match the subscription's current price while it's still active;

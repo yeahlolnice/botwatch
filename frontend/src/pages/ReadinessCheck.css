@@ -84,3 +84,17 @@
   .rc-hero h1 { font-size: 27px; }
   .rc-pillars, .rc-explainer-grid { grid-template-columns: 1fr; }
 }
+
+/* Post-payment banner */
+.rc-paid {
+  border: 1px solid color-mix(in srgb, var(--green, #4ade80) 45%, var(--border));
+  background: color-mix(in srgb, var(--green, #4ade80) 12%, var(--surface));
+  color: var(--text); border-radius: 12px;
+  padding: 14px 18px; margin-bottom: 24px; font-size: 14px; text-align: center;
+}
+.rc-paid strong { color: var(--green, #4ade80); }
+
+/* Buy form (email + pay) */
+.rc-buy { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto; max-width: 460px; }
+.rc-buy .rc-input { min-width: 200px; }
+.rc-buy-note { font-size: 12.5px; color: var(--text-dim); margin-top: 10px; }
