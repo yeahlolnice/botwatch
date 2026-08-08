@@ -27,3 +27,13 @@ export const trafficLimiter = rateLimit({
     legacyHeaders: false,
     message: { error: 'Too many requests to traffic API' },
 });
+
+// Readiness scan limiter — each scan makes outbound fetches to the target site,
+// so cap it per IP to stop botwatch being used as a scanning proxy.
+export const scanLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 12,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many scans, please wait a minute' },
+});
