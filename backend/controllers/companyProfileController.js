@@ -3,6 +3,7 @@ import { getDomainByHostname, getDomainHasJsonLd } from '../crawler/db.js';
 import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichmentQuerys.js';
 import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery } from '../utilities/sqlCrawlerQuerys.js';
 import { assessReadiness } from '../crawler/readinessAssessment.js';
+import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -185,8 +186,21 @@ export const getCompanyProfile = async (req, res) => {
     }
 
     try {
-        const domain = await getDomainByHostname(hostname);
-        const scored = domain && domain.ai_readiness_score !== null && domain.ai_readiness_score !== undefined;
+        let domain = await getDomainByHostname(hostname);
+        let scored = domain && domain.ai_readiness_score !== null && domain.ai_readiness_score !== undefined;
+
+        // Read-through cache: if we've never profiled this domain, scan it live,
+        // persist to the canonical store, and render the fresh result. Every hit
+        // after that is a plain DB read.
+        if (!scored) {
+            try {
+                domain = (await scanAndPersistDomain(hostname)) || domain;
+                scored = domain && domain.ai_readiness_score !== null && domain.ai_readiness_score !== undefined;
+            } catch (error) {
+                console.error('On-demand scan failed for', hostname, '—', error.message);
+            }
+        }
+
         if (!domain || !scored) {
             res.set('Cache-Control', 'public, max-age=300');
             return res.status(200).type('html').send(renderPage({ hostname, found: false }));
