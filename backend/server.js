@@ -27,6 +27,7 @@ import { requireResearchAccess } from './middleware/requireResearchAccess.js';
 import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 import { runMigrations } from './utilities/runMigrations.js';
 import { startReportWorker } from './readiness/reportWorker.js';
+import { getCompanyProfile, getCompanySitemap } from './controllers/companyProfileController.js';
 
 dotenv.config();
 
@@ -86,6 +87,12 @@ app.get('/llms.txt', (req, res) => {
 app.get('/sitemap.xml', (req, res) => {
     res.type('application/xml').sendFile(join(__dirname, 'sitemap.xml'));
 });
+
+// Public, server-rendered AI-readiness profile pages (programmatic SEO) — one
+// per crawled domain, plus their sitemap. Mounted before the SPA catch-all so
+// crawlers get real HTML, not the JS shell.
+app.get('/company/:hostname', getCompanyProfile);
+app.get('/sitemap-companies.xml', getCompanySitemap);
 
 // Serve React build — after honeypots so trap paths are never short-circuited
 if (existsSync(frontendDist)) {

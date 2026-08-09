@@ -297,6 +297,21 @@ export const updatePageWebmcpQuery = `
 UPDATE pages SET webmcp = $2 WHERE id = $1 RETURNING id;
 `;
 
+// Every page's WebMCP result for a domain, for the site-wide profile aggregate.
+export const getDomainWebmcpRowsQuery = `
+SELECT webmcp FROM pages WHERE domain_id = $1 AND webmcp IS NOT NULL;
+`;
+
+// Domains that have been scored — i.e. have a public AI-readiness profile page.
+// Ordered so the sitemap surfaces the strongest first; capped for sitemap size.
+export const getProfiledHostnamesQuery = `
+SELECT hostname, ai_readiness_score, updated_at
+FROM domains
+WHERE ai_readiness_score IS NOT NULL
+ORDER BY ai_readiness_score DESC NULLS LAST
+LIMIT 5000;
+`;
+
 export const getPageReadinessCountsQuery = `
 SELECT
   COUNT(*) FILTER (WHERE status = 'crawled')      AS pages_checked,
