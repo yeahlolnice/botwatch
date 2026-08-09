@@ -216,7 +216,7 @@ export default function SiteSearch() {
       <form className="search-form" onSubmit={handleSearch}>
         <input
           className="search-input"
-          placeholder="example.com"
+          placeholder="https://example.com"
           value={input}
           onChange={e => setInput(e.target.value)}
         />
