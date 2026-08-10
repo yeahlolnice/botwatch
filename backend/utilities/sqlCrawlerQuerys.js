@@ -302,6 +302,22 @@ export const getDomainWebmcpRowsQuery = `
 SELECT webmcp FROM pages WHERE domain_id = $1 AND webmcp IS NOT NULL;
 `;
 
+// Cohort for a category: one representative row per COMPANY (rolled up to its
+// registrable root domain — entity resolution at eTLD+1 scope, so a company's
+// many subdomains count once). We keep each company's best-scoring hostname as
+// its representative. Feeds the "Similar sites" + percentile block; the
+// controller excludes the current company and gates on cohort size.
+export const getCategoryCohortQuery = `
+SELECT DISTINCT ON (COALESCE(root_domain, hostname))
+       COALESCE(root_domain, hostname) AS company,
+       hostname,
+       ai_readiness_score AS score
+FROM domains
+WHERE category = $1
+  AND ai_readiness_score IS NOT NULL
+ORDER BY COALESCE(root_domain, hostname), ai_readiness_score DESC NULLS LAST;
+`;
+
 // Domains that have been scored — i.e. have a public AI-readiness profile page.
 // Ordered so the sitemap surfaces the strongest first; capped for sitemap size.
 export const getProfiledHostnamesQuery = `

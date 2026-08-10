@@ -4,6 +4,7 @@ import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichment
 import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery } from '../utilities/sqlCrawlerQuerys.js';
 import { assessReadiness } from '../crawler/readinessAssessment.js';
 import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
+import { getCohortComparison } from '../crawler/cohort.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -45,7 +46,25 @@ const gradeKind = (g) => {
     return 'neutral';
 };
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt }) {
+// Cohort benchmarking + "Similar sites" — only rendered when we have enough
+// peers to be honest about it (cohort is null otherwise).
+function renderSimilar(hostname, cohort) {
+    if (!cohort) return '';
+    const { category, percentile, peersCount, similar } = cohort;
+    const rows = similar.map((p) => `
+        <a class="peer" href="/company/${encodeURIComponent(p.hostname)}">
+          <span class="peer-host">${esc(p.hostname)}</span>
+          ${chip(`${p.score}/100`, p.kind)}
+        </a>`).join('');
+    return `
+      <div class="pcard peers">
+        <div class="pcard-head"><h2>Similar sites</h2>${chip(`Top ${100 - percentile}%`, percentile >= 50 ? 'good' : 'neutral')}</div>
+        <p class="why">We group sites by what they do, then compare AI-readiness across the group. ${esc(hostname)} is ahead of <b>${percentile}%</b> of the <b>${esc(category)}</b> sites we've profiled (${peersCount} peer${peersCount === 1 ? '' : 's'}). Here are the closest in readiness — click any to see how they compare.</p>
+        <div class="peer-list">${rows}</div>
+      </div>`;
+}
+
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort }) {
     const title = found
         ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
@@ -99,6 +118,8 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
           ${fact('Subdomains found', Array.isArray(sec.subdomains) ? sec.subdomains.length : sec.subdomains?.count)}
         </div>` : `<p class="muted">Security enrichment is still being gathered for this domain.</p>`}
       </div>
+
+      ${renderSimilar(hostname, cohort)}
 
       <div class="cta">
         <h2>See the full report</h2>
@@ -165,6 +186,11 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
   .pcard{border:1px solid var(--border);border-radius:14px;padding:20px 22px;background:var(--surface);border-left:3px solid var(--teal);margin-bottom:16px}
   .pcard.act{border-left-color:var(--amber)}
   .pcard.sec{border-left-color:#7aa2ff}
+  .pcard.peers{border-left-color:#c48bff}
+  .peer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:4px}
+  .peer{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border:1px solid var(--border);border-radius:9px;padding:10px 12px;background:#0c1416}
+  .peer:hover{border-color:color-mix(in srgb,var(--teal) 45%,var(--border))}
+  .peer-host{font-family:var(--mono);font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pcard-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
   .pcard-head h2{margin:0;font-size:18px}
   .chip{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:5px 12px;border-radius:20px;white-space:nowrap}
@@ -240,10 +266,11 @@ export const getCompanyProfile = async (req, res) => {
             return res.status(200).type('html').send(renderPage({ hostname, found: false }));
         }
 
-        const [jsonLdFound, webmcpRows, enr] = await Promise.all([
+        const [jsonLdFound, webmcpRows, enr, cohort] = await Promise.all([
             getDomainHasJsonLd(domain.id),
             query(getDomainWebmcpRowsQuery, [domain.id]).then((r) => r.rows).catch(() => []),
             query(getLatestDomainEnrichmentQuery, [domain.id]).then((r) => r.rows[0] || null).catch(() => null),
+            getCohortComparison(domain).catch(() => null),
         ]);
 
         const webmcp = aggregateWebmcp(webmcpRows);
@@ -269,6 +296,7 @@ export const getCompanyProfile = async (req, res) => {
             enrichment: enr,
             category: domain.category,
             updatedAt: domain.updated_at,
+            cohort,
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);
