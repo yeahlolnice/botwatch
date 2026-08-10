@@ -4,6 +4,7 @@ import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichment
 import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery } from '../utilities/sqlCrawlerQuerys.js';
 import { assessReadiness } from '../crawler/readinessAssessment.js';
 import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
+import { getCohortComparison } from '../crawler/cohort.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -32,15 +33,50 @@ function aggregateWebmcp(rows) {
 }
 
 const signalRow = (c) => `<li class="${c.present ? 'yes' : 'no'}"><span>${c.present ? '✓' : '✕'}</span>${esc(c.label)}</li>`;
+const chip = (label, kind) => `<span class="chip chip--${kind}">${esc(label)}</span>`;
+const fact = (label, value) => (value === undefined || value === null || value === '' || value === false)
+    ? '' : `<div class="fact"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcpTools, enrichment, category, updatedAt }) {
+const bandKind = (b) => ({ strong: 'good', developing: 'warn', emerging: 'bad' }[String(b || '').toLowerCase()] || 'neutral');
+const gradeKind = (g) => {
+    const s = String(g || '').toLowerCase();
+    if (/strong|a\b|good|excellent/.test(s)) return 'good';
+    if (/fair|b\b|moderate/.test(s)) return 'warn';
+    if (/weak|poor|c\b|d\b|f\b/.test(s)) return 'bad';
+    return 'neutral';
+};
+
+// Cohort benchmarking + "Similar sites" — only rendered when we have enough
+// peers to be honest about it (cohort is null otherwise).
+function renderSimilar(hostname, cohort) {
+    if (!cohort) return '';
+    const { category, percentile, peersCount, similar } = cohort;
+    const rows = similar.map((p) => `
+        <a class="peer" href="/company/${encodeURIComponent(p.hostname)}">
+          <span class="peer-host">${esc(p.hostname)}</span>
+          ${chip(`${p.score}/100`, p.kind)}
+        </a>`).join('');
+    return `
+      <div class="pcard peers">
+        <div class="pcard-head"><h2>Similar sites</h2>${chip(`Top ${100 - percentile}%`, percentile >= 50 ? 'good' : 'neutral')}</div>
+        <p class="why">We group sites by what they do, then compare AI-readiness across the group. ${esc(hostname)} is ahead of <b>${percentile}%</b> of the <b>${esc(category)}</b> sites we've profiled (${peersCount} peer${peersCount === 1 ? '' : 's'}). Here are the closest in readiness — click any to see how they compare.</p>
+        <div class="peer-list">${rows}</div>
+      </div>`;
+}
+
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort }) {
     const title = found
-        ? `${hostname} — AI readiness score & agent-readiness | botwatch`
+        ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
     const desc = found
-        ? `How ready is ${hostname} for AI agents? An independent, passive assessment of ${hostname}'s AI legibility (llms.txt, structured data) and agent actionability (WebMCP), by botwatch.`
+        ? `Where does ${hostname} stand for the agentic web? An independent read on ${hostname}'s AI readiness, WebMCP agent-actionability, and security posture — by botwatch.`
         : `We haven't analysed ${hostname} yet. Run a free instant AI-readiness check.`;
     const canonical = `${SITE}/company/${encodeURIComponent(hostname)}`;
+
+    const wm = webmcp || {};
+    const toolCount = wm.declarative?.count || 0;
+    const sec = enrichment || {};
+    const secGrade = sec.security_headers?.gradeWord || sec.security_headers?.grade || null;
 
     const body = found ? `
       <div class="summary">
@@ -48,54 +84,60 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
           <div class="host">${esc(hostname)}</div>
           ${category ? `<div class="cat">${esc(category)}</div>` : ''}
         </div>
-        <div class="band band--${esc((band || '').toLowerCase())}">${esc(band || '—')}</div>
+        <div class="band band--${esc((band || '').toLowerCase())}">${esc(band || '—')} for AI</div>
       </div>
 
-      <section>
-        <h2>Readiness signals</h2>
-        <div class="pillars">
-          <div class="pillar">
-            <h3>Legibility <b>${legibility.present}/${legibility.total}</b></h3>
-            <p class="sub">Can agents read &amp; understand the site?</p>
-            <ul class="signals">${legibility.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
-          </div>
-          <div class="pillar act">
-            <h3>Actionability <b>${actionability.present}/${actionability.total}</b></h3>
-            <p class="sub">Can agents act on the site (WebMCP)?</p>
-            <ul class="signals">${actionability.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
-          </div>
-        </div>
-      </section>
+      <p class="intro">Here's how ready <b>${esc(hostname)}</b> is for the agentic web — how well AI agents can <b>read</b> it, <b>act on</b> it, and how <b>secure</b> the foundations are. Assessed passively by botwatch; no affiliation with ${esc(hostname)}.</p>
 
-      <section>
-        <h2>Agent actionability (WebMCP)</h2>
-        <p>${webmcpTools > 0
-            ? `${webmcpTools} WebMCP tool${webmcpTools === 1 ? '' : 's'} detected — agents can take structured actions here.`
-            : `No WebMCP tools detected. Agents can't reliably act on this site yet — an early-mover opportunity, since almost no sites have this.`}</p>
-      </section>
+      <div class="pcard">
+        <div class="pcard-head"><h2>AI Readiness</h2>${chip(`${legibility.present}/${legibility.total} signals`, bandKind(band))}</div>
+        <p class="why">AI assistants and answer engines increasingly read the web through automated agents. Sites that publish an <code>llms.txt</code> index, structured data, and a clear AI-crawler policy get represented accurately in AI answers — the rest get guessed at, misquoted, or skipped.</p>
+        <ul class="signals">${legibility.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
+      </div>
 
-      ${enrichment ? `
-      <section>
-        <h2>Technical snapshot</h2>
-        <div class="facts">
-          ${enrichment.tls?.issuer ? `<div class="fact"><span>TLS issuer</span><b>${esc(enrichment.tls.issuer)}</b></div>` : ''}
-          ${enrichment.security_headers?.gradeWord || enrichment.security_headers?.grade ? `<div class="fact"><span>Security headers</span><b>${esc(enrichment.security_headers.gradeWord || enrichment.security_headers.grade)}</b></div>` : ''}
-          ${enrichment.hosting?.org ? `<div class="fact"><span>Hosting</span><b>${esc(enrichment.hosting.org)}</b></div>` : ''}
-          ${enrichment.email_posture?.dmarc ? `<div class="fact"><span>DMARC</span><b>${esc(enrichment.email_posture.dmarc)}</b></div>` : ''}
-        </div>
-      </section>` : ''}
+      <div class="pcard act">
+        <div class="pcard-head"><h2>WebMCP — agent actionability</h2>${chip(toolCount > 0 ? `${toolCount} tool${toolCount === 1 ? '' : 's'}` : 'Not detected', toolCount > 0 ? 'good' : 'neutral')}</div>
+        <p class="why">WebMCP is an emerging browser standard (currently a Chrome origin trial) that lets a site expose tools an AI agent can call directly — search, book, check out — instead of clumsily driving your UI. Adoption is near zero today, so getting it right early is a genuine first-mover edge.</p>
+        ${toolCount > 0
+            ? `<p>We detected <b>${toolCount}</b> agent-callable tool${toolCount === 1 ? '' : 's'} on this site${wm.declarative?.tools?.length ? `: ${wm.declarative.tools.slice(0, 6).map((t) => `<code>${esc(t.name)}</code>`).join(', ')}` : ''}.</p>`
+            : `<p class="muted">No WebMCP tools detected — agents can't yet take reliable, structured actions here. That's the single biggest opportunity to get ahead, because almost no site has this.</p>`}
+        <ul class="signals">${actionability.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
+      </div>
+
+      <div class="pcard sec">
+        <div class="pcard-head"><h2>Security Posture</h2>${secGrade ? chip(secGrade, gradeKind(secGrade)) : chip('Not assessed', 'neutral')}</div>
+        <p class="why">Before an agent — or a customer — trusts your site, the fundamentals have to hold: valid TLS, protective security headers, and email authentication that blocks spoofing. These are the same signals attackers probe first, and we watch them every day.</p>
+        ${enrichment ? `<div class="facts">
+          ${fact('TLS issuer', sec.tls?.issuer)}
+          ${fact('Certificate valid to', sec.tls?.validTo)}
+          ${fact('Security headers', secGrade)}
+          ${fact('SPF', sec.email_posture?.spf ? 'present' : undefined)}
+          ${fact('DKIM', sec.email_posture?.dkim ? 'present' : undefined)}
+          ${fact('DMARC', sec.email_posture?.dmarc)}
+          ${fact('Hosting', sec.hosting?.org)}
+          ${fact('Subdomains found', Array.isArray(sec.subdomains) ? sec.subdomains.length : sec.subdomains?.count)}
+        </div>` : `<p class="muted">Security enrichment is still being gathered for this domain.</p>`}
+      </div>
+
+      ${renderSimilar(hostname, cohort)}
 
       <div class="cta">
-        <h2>Get the full report</h2>
-        <p>Unlock the specific, prioritised fixes to make ${esc(hostname)} AI-ready — a deep crawl, every signal, and step-by-step recommendations, emailed to you.</p>
-        <a class="btn" href="/readiness-check?url=${encodeURIComponent(hostname)}">See the full report — $5 AUD →</a>
+        <h2>See the full report</h2>
+        <p>This is the free snapshot. The full report runs a deep, multi-page crawl of ${esc(hostname)}, checks every signal in depth — including your WebMCP tool quality — and gives you a prioritised, step-by-step plan to become AI-ready. Emailed to you.</p>
+        <a class="btn" href="/readiness-check?url=${encodeURIComponent(hostname)}">Get the full report — $5 AUD →</a>
       </div>
-      <p class="updated">Passively assessed${updatedAt ? ` · last updated ${esc(new Date(updatedAt).toISOString().slice(0, 10))}` : ''}. botwatch does not affiliate with ${esc(hostname)}.</p>
+
+      <div class="about">
+        <h2>Why botwatch</h2>
+        <p>We run honeypots and watch how automated agents and crawlers actually behave across the web, every day. We turn that intelligence into a plain read on where your site stands for the agentic web — and exactly how to get ahead of it.</p>
+      </div>
+
+      <p class="updated">Passively assessed${updatedAt ? ` · last updated ${esc(new Date(updatedAt).toISOString().slice(0, 10))}` : ''}. botwatch is independent and not affiliated with ${esc(hostname)}.</p>
     ` : `
       <div class="summary"><div><div class="host">${esc(hostname)}</div></div></div>
       <section>
-        <h2>Not analysed yet</h2>
-        <p>We haven't assessed ${esc(hostname)} for AI readiness yet. Run a free instant check to see where it stands on agent legibility and actionability.</p>
+        <h2>We couldn't analyse this one</h2>
+        <p>We weren't able to reach or read ${esc(hostname)} just now. Try a free instant check, or come back shortly.</p>
         <div class="cta">
           <a class="btn" href="/readiness-check?url=${encodeURIComponent(hostname)}">Run a free AI-readiness check →</a>
         </div>
@@ -138,12 +180,30 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
   h2{font-size:18px;font-weight:800;margin:0 0 12px}
   h3{font-size:15px;margin:0}
   h3 b{font-family:var(--mono);color:var(--teal);margin-left:6px}
-  .pillars{display:grid;gap:14px}
-  @media(min-width:560px){.pillars{grid-template-columns:1fr 1fr}}
-  .pillar{border:1px solid var(--border);border-radius:12px;padding:16px 18px;background:var(--surface);border-top:3px solid var(--teal)}
-  .pillar.act{border-top-color:var(--amber)}
-  .pillar.act h3 b{color:var(--amber)}
-  .sub{font-size:12px;color:var(--dim);margin:4px 0 12px}
+  .intro{font-size:15px;color:var(--dim);margin:0 0 24px;max-width:66ch}
+  .intro b{color:var(--text)}
+  code{font-family:var(--mono);font-size:.86em;background:#0c1416;border:1px solid var(--border);border-radius:5px;padding:1px 5px;color:var(--teal)}
+  .pcard{border:1px solid var(--border);border-radius:14px;padding:20px 22px;background:var(--surface);border-left:3px solid var(--teal);margin-bottom:16px}
+  .pcard.act{border-left-color:var(--amber)}
+  .pcard.sec{border-left-color:#7aa2ff}
+  .pcard.peers{border-left-color:#c48bff}
+  .peer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:4px}
+  .peer{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border:1px solid var(--border);border-radius:9px;padding:10px 12px;background:#0c1416}
+  .peer:hover{border-color:color-mix(in srgb,var(--teal) 45%,var(--border))}
+  .peer-host{font-family:var(--mono);font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pcard-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .pcard-head h2{margin:0;font-size:18px}
+  .chip{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:5px 12px;border-radius:20px;white-space:nowrap}
+  .chip--good{background:color-mix(in srgb,var(--green) 18%,transparent);color:#86efac}
+  .chip--warn{background:color-mix(in srgb,var(--amber) 22%,transparent);color:#e3c675}
+  .chip--bad{background:color-mix(in srgb,var(--red) 18%,transparent);color:#f19999}
+  .chip--neutral{background:color-mix(in srgb,var(--dim) 20%,transparent);color:var(--dim)}
+  .why{font-size:13px;color:var(--dim);line-height:1.6;margin:0 0 14px;max-width:70ch}
+  .pcard p{font-size:14px;margin:10px 0}
+  .muted{color:var(--dim)}
+  .about{border:1px solid var(--border);border-radius:14px;padding:18px 22px;background:var(--surface);margin:18px 0}
+  .about h2{margin:0 0 6px}
+  .about p{font-size:14px;color:var(--dim);margin:0;max-width:68ch}
   .signals{list-style:none;margin:0;padding:0}
   .signals li{font-size:13.5px;padding:5px 0;display:flex;gap:9px;align-items:center}
   .signals li span{font-weight:800;width:14px;text-align:center}
@@ -206,10 +266,11 @@ export const getCompanyProfile = async (req, res) => {
             return res.status(200).type('html').send(renderPage({ hostname, found: false }));
         }
 
-        const [jsonLdFound, webmcpRows, enr] = await Promise.all([
+        const [jsonLdFound, webmcpRows, enr, cohort] = await Promise.all([
             getDomainHasJsonLd(domain.id),
             query(getDomainWebmcpRowsQuery, [domain.id]).then((r) => r.rows).catch(() => []),
             query(getLatestDomainEnrichmentQuery, [domain.id]).then((r) => r.rows[0] || null).catch(() => null),
+            getCohortComparison(domain).catch(() => null),
         ]);
 
         const webmcp = aggregateWebmcp(webmcpRows);
@@ -231,10 +292,11 @@ export const getCompanyProfile = async (req, res) => {
             band: assessment.band,
             legibility: assessment.legibility,
             actionability: assessment.actionability,
-            webmcpTools: webmcp.declarative.count,
+            webmcp,
             enrichment: enr,
             category: domain.category,
             updatedAt: domain.updated_at,
+            cohort,
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);
