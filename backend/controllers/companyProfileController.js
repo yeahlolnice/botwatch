@@ -7,6 +7,7 @@ import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
 import { getCohortComparison } from '../crawler/cohort.js';
 import { buildAiCrawlerMatrix } from '../crawler/aiCrawlerMatrix.js';
 import { buildStructuredDataDepth } from '../crawler/structuredData.js';
+import { buildDiscoverability } from '../crawler/discoverability.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -66,6 +67,18 @@ function renderStructuredData(sd) {
       </div>`;
 }
 
+// Agent discoverability — machine-readable entry points an agent uses to orient.
+// Rendered inside the WebMCP (actionability) pillar; empty string when null.
+function renderDiscoverability(d) {
+    if (!d) return '';
+    return `
+      <div class="matrix">
+        <div class="matrix-head"><h3>Agent discoverability</h3>${chip(`${d.present}/${d.total}`, d.present >= 3 ? 'good' : d.present > 0 ? 'warn' : 'neutral')}</div>
+        <p class="why">Whether an AI agent arriving here can find the machine-readable entry points it needs to understand and act on the site.</p>
+        <ul class="signals">${d.checks.map(signalRow).join('')}</ul>
+      </div>`;
+}
+
 // AI-crawler access matrix — which named AI systems this site's robots.txt lets
 // in. Rendered inside the AI Readiness pillar; empty string when no policy.
 function renderCrawlerMatrix(matrix) {
@@ -104,7 +117,7 @@ function renderSimilar(hostname, cohort) {
       </div>`;
 }
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData }) {
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData, discoverability }) {
     const title = found
         ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
@@ -144,6 +157,7 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
             ? `<p>We detected <b>${toolCount}</b> agent-callable tool${toolCount === 1 ? '' : 's'} on this site${wm.declarative?.tools?.length ? `: ${wm.declarative.tools.slice(0, 6).map((t) => `<code>${esc(t.name)}</code>`).join(', ')}` : ''}.</p>`
             : `<p class="muted">No WebMCP tools detected — agents can't yet take reliable, structured actions here. That's the single biggest opportunity to get ahead, because almost no site has this.</p>`}
         <ul class="signals">${actionability.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
+        ${renderDiscoverability(discoverability)}
       </div>
 
       <div class="pcard sec">
@@ -352,6 +366,7 @@ export const getCompanyProfile = async (req, res) => {
             cohort,
             crawlerMatrix: buildAiCrawlerMatrix(domain.ai_training_policy, domain.ai_training_policy_explicit),
             structuredData: buildStructuredDataDepth(jsonLdTypeRows),
+            discoverability: buildDiscoverability({ domain, webmcp, jsonLdFound }),
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);
