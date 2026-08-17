@@ -99,6 +99,46 @@ export const updateDomainContentLicensingQuery = `
 UPDATE domains SET content_licensing = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
 `;
 
+// Time-series of a domain's AI-readiness score, for the adoption-trend view.
+export const createDomainScoreHistoryTableQuery = `
+CREATE TABLE IF NOT EXISTS domain_score_history (
+  id BIGSERIAL PRIMARY KEY,
+  domain_id BIGINT NOT NULL REFERENCES domains(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`;
+
+export const createDomainScoreHistoryIndexQuery = `
+CREATE INDEX IF NOT EXISTS idx_domain_score_history_domain ON domain_score_history (domain_id, collected_at);
+`;
+
+// Record a new reading only when it's the first for the domain or the score
+// actually changed since the last one — so flat runs of repeated crawls don't
+// bloat the series.
+export const insertDomainScoreHistoryQuery = `
+INSERT INTO domain_score_history (domain_id, score)
+SELECT $1, $2
+WHERE NOT EXISTS (
+  SELECT 1 FROM domain_score_history
+  WHERE domain_id = $1
+  ORDER BY collected_at DESC
+  LIMIT 1
+) OR (
+  SELECT score FROM domain_score_history
+  WHERE domain_id = $1
+  ORDER BY collected_at DESC
+  LIMIT 1
+) <> $2;
+`;
+
+export const getDomainScoreHistoryQuery = `
+SELECT score, collected_at FROM domain_score_history
+WHERE domain_id = $1
+ORDER BY collected_at ASC
+LIMIT 200;
+`;
+
 export const addPageContentColumnsQuery = `
 ALTER TABLE pages
   ADD COLUMN IF NOT EXISTS title TEXT,
