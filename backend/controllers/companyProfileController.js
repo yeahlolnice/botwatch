@@ -5,6 +5,7 @@ import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery } from '../utilitie
 import { assessReadiness } from '../crawler/readinessAssessment.js';
 import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
 import { getCohortComparison } from '../crawler/cohort.js';
+import { buildAiCrawlerMatrix } from '../crawler/aiCrawlerMatrix.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -46,6 +47,26 @@ const gradeKind = (g) => {
     return 'neutral';
 };
 
+// AI-crawler access matrix — which named AI systems this site's robots.txt lets
+// in. Rendered inside the AI Readiness pillar; empty string when no policy.
+function renderCrawlerMatrix(matrix) {
+    if (!matrix) return '';
+    const rows = matrix.bots.map((b) => `
+        <div class="crawl">
+          <div class="crawl-id"><b>${esc(b.operator)}</b><span>${esc(b.bot)} · ${esc(b.purpose)}</span></div>
+          ${chip(b.allowed ? 'Allowed' : 'Blocked', b.allowed ? 'good' : 'neutral')}
+        </div>`).join('');
+    const note = matrix.explicit
+        ? 'This site names AI crawlers explicitly — a deliberate, thought-through policy.'
+        : "Inferred from the site's general robots.txt rules — no AI-specific policy is set.";
+    return `
+      <div class="matrix">
+        <div class="matrix-head"><h3>AI-crawler access</h3>${chip(`${matrix.allowedCount}/${matrix.total} allowed`, matrix.allowedCount > 0 ? 'good' : 'neutral')}</div>
+        <p class="why">Which AI systems this site lets crawl it, per <code>robots.txt</code>. Allowing training and search crawlers means your content can feed and surface in AI answers; blocking is a valid opt-out. ${esc(note)}</p>
+        <div class="crawl-grid">${rows}</div>
+      </div>`;
+}
+
 // Cohort benchmarking + "Similar sites" — only rendered when we have enough
 // peers to be honest about it (cohort is null otherwise).
 function renderSimilar(hostname, cohort) {
@@ -64,7 +85,7 @@ function renderSimilar(hostname, cohort) {
       </div>`;
 }
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort }) {
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix }) {
     const title = found
         ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
@@ -93,6 +114,7 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
         <div class="pcard-head"><h2>AI Readiness</h2>${chip(`${legibility.present}/${legibility.total} signals`, bandKind(band))}</div>
         <p class="why">AI assistants and answer engines increasingly read the web through automated agents. Sites that publish an <code>llms.txt</code> index, structured data, and a clear AI-crawler policy get represented accurately in AI answers — the rest get guessed at, misquoted, or skipped.</p>
         <ul class="signals">${legibility.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
+        ${renderCrawlerMatrix(crawlerMatrix)}
       </div>
 
       <div class="pcard act">
@@ -191,6 +213,14 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
   .peer{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border:1px solid var(--border);border-radius:9px;padding:10px 12px;background:#0c1416}
   .peer:hover{border-color:color-mix(in srgb,var(--teal) 45%,var(--border))}
   .peer-host{font-family:var(--mono);font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .matrix{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
+  .matrix-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .matrix-head h3{font-size:14px;font-weight:800}
+  .crawl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin-top:10px}
+  .crawl{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:9px;padding:8px 11px;background:#0c1416}
+  .crawl-id{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+  .crawl-id b{font-size:13px}
+  .crawl-id span{font-family:var(--mono);font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pcard-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
   .pcard-head h2{margin:0;font-size:18px}
   .chip{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:5px 12px;border-radius:20px;white-space:nowrap}
@@ -297,6 +327,7 @@ export const getCompanyProfile = async (req, res) => {
             category: domain.category,
             updatedAt: domain.updated_at,
             cohort,
+            crawlerMatrix: buildAiCrawlerMatrix(domain.ai_training_policy, domain.ai_training_policy_explicit),
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);
