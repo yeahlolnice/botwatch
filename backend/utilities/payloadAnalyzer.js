@@ -67,7 +67,7 @@ const SIGNATURES = [
     { id: 'ssti_ruby',        category: 'ssti',     score: 45, pattern: /<%=[\s\S]*?%>/ },
 
     // ── Log4Shell / Log4j ─────────────────────────────────────────────────────
-    { id: 'log4j_jndi',       category: 'log4j',    score: 90, pattern: /\$\{jndi:/i },
+    { id: 'log4j_jndi',       category: 'log4j',    score: 90, name: 'Log4Shell', cve: ['CVE-2021-44228'], severity: 'critical', pattern: /\$\{jndi:/i },
     { id: 'log4j_nested',     category: 'log4j',    score: 90, pattern: /\$\{[^\}]*\$\{/i },
     { id: 'log4j_ldap',       category: 'log4j',    score: 85, pattern: /\$\{.*ldap[si]?:/i },
     { id: 'log4j_rmi',        category: 'log4j',    score: 85, pattern: /\$\{.*rmi:/i },
@@ -99,13 +99,64 @@ const SIGNATURES = [
     { id: 'scanner_masscan',  category: 'scanner',  score: 65, pattern: /masscan/i },
     { id: 'scanner_zgrab',    category: 'scanner',  score: 60, pattern: /zgrab/i },
     { id: 'scanner_hydra',    category: 'scanner',  score: 70, pattern: /hydra/i },
+
+    // ── Known-CVE exploit signatures ──────────────────────────────────────────
+    // High-precision patterns for named, widely-exploited CVEs. Each carries a
+    // cve[] + human name so the analyst UI can say "Spring4Shell" not "regex #57".
+    { id: 'cve_spring4shell',  category: 'exploit', score: 90, name: 'Spring4Shell',        cve: ['CVE-2022-22965'], severity: 'critical', pattern: /class\.module\.classloader/i },
+    { id: 'cve_shellshock',    category: 'cmdi',    score: 90, name: 'Shellshock',          cve: ['CVE-2014-6271'],  severity: 'critical', pattern: /\(\s*\)\s*\{\s*:?\s*;?\s*\}\s*;/ },
+    { id: 'cve_java_exec',     category: 'exploit', score: 85, name: 'Java Runtime.exec',    cve: ['CVE-2022-26134'], severity: 'critical', pattern: /\.getruntime\(\)\.exec\(|new\s+processbuilder/i },
+    { id: 'cve_citrix',        category: 'traversal', score: 80, name: 'Citrix ADC path',   cve: ['CVE-2019-19781'], severity: 'critical', pattern: /\/(\.\.\/)?vpns\//i },
+    { id: 'cve_f5_bigip',      category: 'traversal', score: 80, name: 'F5 BIG-IP TMUI',     cve: ['CVE-2020-5902'],  severity: 'critical', pattern: /\/tmui\/.*\.\.;|\/tmui\/login\.jsp\/\.\./i },
+    { id: 'cve_phpunit',       category: 'exploit', score: 80, name: 'PHPUnit eval-stdin',   cve: ['CVE-2017-9841'],  severity: 'high',     pattern: /eval-stdin\.php/i },
+    { id: 'cve_drupalgeddon2', category: 'exploit', score: 80, name: 'Drupalgeddon2',        cve: ['CVE-2018-7600'],  severity: 'critical', pattern: /#post_render|element_parents=[^&]*%23/i },
+    { id: 'cve_gpon',          category: 'cmdi',    score: 75, name: 'GPON RCE',             cve: ['CVE-2018-10561'], severity: 'high',     pattern: /gponform|dest_host=[^&]*[;`|]/i },
+    { id: 'cve_thinkphp',      category: 'exploit', score: 80, name: 'ThinkPHP RCE',          cve: ['CVE-2018-20062'], severity: 'high',     pattern: /invokefunction.*call_user_func/i },
+    { id: 'cve_proxyshell',    category: 'exploit', score: 75, name: 'Exchange ProxyShell',   cve: ['CVE-2021-34473'], severity: 'high',     pattern: /autodiscover\.json\?[^ ]*@|\/powershell\/?\?[^ ]*@/i },
+    { id: 'cve_moveit',        category: 'exploit', score: 75, name: 'MOVEit Transfer',       cve: ['CVE-2023-34362'], severity: 'high',     pattern: /moveitisapi|\/guestaccess\.aspx/i },
+    { id: 'cve_webshell',      category: 'exploit', score: 70, name: 'Known webshell',        cve: [],                 severity: 'high',     pattern: /\/(c99|r57|wso|b374k|alfa|shell)\.php/i },
 ];
+
+// Attacker intent per signature category — what the request is trying to do.
+const INTENT_BY_CATEGORY = {
+    sqli: 'injection', xss: 'injection', ssti: 'injection', cmdi: 'injection', xxe: 'injection',
+    log4j: 'exploit', deser: 'exploit', ssrf: 'exploit', exploit: 'exploit',
+    traversal: 'recon', probe: 'recon', scanner: 'scanner',
+};
+
+// Severity band from a signal's score, used when a signature doesn't set one.
+function severityFromScore(score) {
+    if (score >= 80) return 'critical';
+    if (score >= 55) return 'high';
+    if (score >= 35) return 'medium';
+    return 'low';
+}
+
+const SEVERITY_RANK = { low: 1, medium: 2, high: 3, critical: 4 };
+
+// Roll matched signals up into an overall classification: the dominant intent
+// (highest severity, tie-broken by score) + max severity + every CVE seen.
+function classify(signals) {
+    if (!signals.length) return { primaryIntent: null, severity: null, cves: [] };
+    let top = signals[0];
+    for (const s of signals) {
+        if (SEVERITY_RANK[s.severity] > SEVERITY_RANK[top.severity]
+            || (SEVERITY_RANK[s.severity] === SEVERITY_RANK[top.severity] && s.score > top.score)) {
+            top = s;
+        }
+    }
+    const cves = [...new Set(signals.flatMap((s) => s.cve || []))];
+    return { primaryIntent: top.intent, severity: top.severity, cves };
+}
 
 /**
  * Flatten all inspectable string data from a request into a single target map.
  * Keeps track of where each string came from so signals can be attributed.
+ * Accepts any request-like object exposing originalUrl/path/query/headers/
+ * rawBody/body — the live middleware passes `req`; the reclassifier passes an
+ * object built from a stored request_tracking row.
  */
-function buildTargets(req) {
+export function buildTargets(req) {
     const targets = [];
 
     // Path + raw URL
@@ -172,6 +223,10 @@ export function analyzeRequest(req) {
                         id: sig.id,
                         category: sig.category,
                         score: sig.score,
+                        intent: sig.intent || INTENT_BY_CATEGORY[sig.category] || 'other',
+                        severity: sig.severity || severityFromScore(sig.score),
+                        cve: sig.cve || null,
+                        name: sig.name || null,
                         source,
                         // Store a short excerpt around the match for forensics
                         excerpt: match ? excerpt(value, match.index, 120) : null,
@@ -183,10 +238,10 @@ export function analyzeRequest(req) {
 
     const threatScore = Math.min(signals.reduce((sum, s) => sum + s.score, 0), 100);
 
-    return { signals, threatScore };
+    return { signals, threatScore, classification: classify(signals) };
 }
 
-function excerpt(str, index, maxLen) {
+export function excerpt(str, index, maxLen) {
     const start = Math.max(0, index - 20);
     const end = Math.min(str.length, index + maxLen);
     const snip = str.slice(start, end);

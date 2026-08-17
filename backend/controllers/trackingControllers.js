@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { query } from "../utilities/connectDB.js";
 import { classifyUserAgent } from "../utilities/botClassifier.js";
 import { analyzeRequest } from "../utilities/payloadAnalyzer.js";
+import { scoreAnomaly, ANOMALY_THRESHOLD } from "../utilities/payloadAnomaly.js";
 import {
     createRequestTrackingTableQuery,
     migrateTrackingTableQuery,
@@ -35,8 +36,8 @@ const trackRequest = (req, res, next) => {
 
     // Run payload analysis synchronously before next() so req.threatAnalysis
     // is available to honeypot handlers if they want to read it
-    const { signals, threatScore } = analyzeRequest(req);
-    req.threatAnalysis = { signals, threatScore };
+    const { signals, threatScore, classification } = analyzeRequest(req);
+    req.threatAnalysis = { signals, threatScore, classification };
 
     res.on('finish', async () => {
         try {
@@ -118,6 +119,17 @@ const trackRequest = (req, res, next) => {
             const rawBodyBytes = stripCredentials ? null : (req.rawBodyBytes ?? null);
             const rawBodyTruncated = stripCredentials ? false : (req.rawBodyTruncated ?? false);
 
+            // Novel-payload / anomaly signal. Run on stripping-aware parts so a
+            // stripped signup body never leaks into anomaly excerpts. Flag as
+            // "unclassified suspicious" only when no known signature matched.
+            const anomalyParts = {
+                method, path, originalUrl: req.originalUrl,
+                query: queryParams, headers,
+                rawBody, body: stripCredentials ? null : body,
+            };
+            const { anomalyScore, reasons: anomalyReasons } = scoreAnomaly(anomalyParts);
+            const suspiciousUnclassified = anomalyScore >= ANOMALY_THRESHOLD && signals.length === 0;
+
             await query(insertRequestQuery, [
                 method, path, fullUrl,
                 Object.keys(queryParams).length ? JSON.stringify(queryParams) : null,
@@ -136,6 +148,11 @@ const trackRequest = (req, res, next) => {
                 // Country from Cloudflare header — free, no API needed
                 headers['cf-ipcountry'] || null,
                 null, null, null, null, // region, city, asn, provider — reserved for enrichment
+                classification.primaryIntent, classification.severity,
+                classification.cves.length ? JSON.stringify(classification.cves) : null,
+                anomalyScore,
+                anomalyReasons.length ? JSON.stringify(anomalyReasons) : null,
+                suspiciousUnclassified,
             ]);
         } catch (error) {
             console.error('Tracking error:', error.message);
