@@ -22,6 +22,7 @@ import {
     updateDomainProfileQuery,
     updateDomainAiTrainingPolicyQuery,
     updateDomainRobotsTxtFoundQuery,
+    updateDomainContentLicensingQuery,
     updateDomainAiTxtQuery,
     updateDomainHumansTxtQuery,
     updateDomainAiReadinessScoreQuery,
@@ -135,6 +136,11 @@ export async function updateDomainAiTrainingPolicy(domainId, policy, hasExplicit
 
 export async function updateDomainRobotsTxtFound(domainId, found) {
     const result = await query(updateDomainRobotsTxtFoundQuery, [domainId, found]);
+    return result.rows[0] || null;
+}
+
+export async function updateDomainContentLicensing(domainId, licensing) {
+    const result = await query(updateDomainContentLicensingQuery, [domainId, licensing ? JSON.stringify(licensing) : null]);
     return result.rows[0] || null;
 }
 
