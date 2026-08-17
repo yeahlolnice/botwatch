@@ -23,6 +23,14 @@ const THREAT_CAT_COLORS = {
     deser: '#ef4444',
     probe: '#6366f1',
     scanner: '#ef4444',
+    exploit: '#dc2626',
+}
+
+const SEVERITY_COLORS = {
+    critical: '#dc2626',
+    high: '#f97316',
+    medium: '#eab308',
+    low: '#6366f1',
 }
 
 const METHOD_COLORS = {
@@ -210,6 +218,9 @@ function RequestDetail({ request, onClose }) {
                                 {request.bot_score ?? 0} / 100
                             </dd>
                             <dt>Is Trap Hit</dt><dd>{request.is_trap ? `Yes — ${request.trap_type}` : 'No'}</dd>
+                            <dt>Attack Intent</dt><dd>{request.attack_intent || '—'}</dd>
+                            <dt>Severity</dt><dd style={{ color: SEVERITY_COLORS[request.attack_severity] || 'inherit', fontWeight: request.attack_severity ? 700 : 400 }}>{request.attack_severity || '—'}</dd>
+                            {request.cve_ids?.length > 0 && <><dt>CVEs</dt><dd className="mono">{request.cve_ids.join(', ')}</dd></>}
                             <dt>Accept-Language</dt><dd>{request.accept_language || '—'}</dd>
                             <dt>Sec-Fetch-Mode</dt><dd>{request.sec_fetch_mode || '—'}</dd>
                         </dl>
@@ -233,6 +244,21 @@ function RequestDetail({ request, onClose }) {
                                     <span className="signal-id">{s.id}</span>
                                     <span className="signal-source">in {s.source}</span>
                                     <span className="signal-score" style={{ color: scoreColor(s.score) }}>+{s.score}</span>
+                                    {s.excerpt && <pre className="signal-excerpt">{s.excerpt}</pre>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {request.anomaly_signals && request.anomaly_signals.length > 0 && (
+                    <div className="detail-section">
+                        <h4>Anomaly Signals — novel/unclassified{request.anomaly_score != null ? ` (score ${request.anomaly_score})` : ''}</h4>
+                        <div className="signals-list">
+                            {request.anomaly_signals.map((s, i) => (
+                                <div key={i} className="signal-row">
+                                    <span className="signal-cat" style={{ color: '#c48bff' }}>{s.id}</span>
+                                    <span className="signal-source">in {s.source}</span>
                                     {s.excerpt && <pre className="signal-excerpt">{s.excerpt}</pre>}
                                 </div>
                             ))}
@@ -286,6 +312,7 @@ export default function Dashboard() {
     const [countryFilter, setCountryFilter] = useState('')
     const [page, setPage] = useState(1)
     const [selected, setSelected] = useState(null)
+    const [suspicious, setSuspicious] = useState([])
     const [activeTab, setActiveTab] = useState('traffic')
     const debounceRef = useRef(null)
     const [isAdmin, setIsAdmin] = useState(false)
@@ -366,6 +393,12 @@ export default function Dashboard() {
             setStats(statsData)
         } catch (e) {
             // stats failure is non-fatal
+        }
+        try {
+            const susp = await apiFetch('/api/traffic?suspicious=true&limit=25')
+            setSuspicious(susp.data)
+        } catch (e) {
+            // triage list failure is non-fatal
         }
     }, [])
 
@@ -592,6 +625,106 @@ export default function Dashboard() {
                                             <td><span style={{ color: THREAT_CAT_COLORS[t.category] || '#ef4444', fontWeight: 600 }}>{t.category}</span></td>
                                             <td>{parseInt(t.occurrences).toLocaleString()}</td>
                                             <td>{parseInt(t.unique_ips).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+
+                    {stats?.attackIntents?.length > 0 && (
+                        <div className="breakdown-card">
+                            <h3>Attacker Intent</h3>
+                            <table className="breakdown-table">
+                                <thead><tr><th>Intent</th><th>Occurrences</th><th>Unique IPs</th></tr></thead>
+                                <tbody>
+                                    {stats.attackIntents.map(i => (
+                                        <tr key={i.intent}>
+                                            <td style={{ fontWeight: 600, textTransform: 'capitalize' }}>{i.intent}</td>
+                                            <td>{parseInt(i.occurrences).toLocaleString()}</td>
+                                            <td>{parseInt(i.unique_ips).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {stats?.attackSeverities?.length > 0 && (
+                        <div className="breakdown-card">
+                            <h3>Severity</h3>
+                            <table className="breakdown-table">
+                                <thead><tr><th>Severity</th><th>Occurrences</th></tr></thead>
+                                <tbody>
+                                    {stats.attackSeverities.map(s => (
+                                        <tr key={s.severity}>
+                                            <td style={{ color: SEVERITY_COLORS[s.severity] || 'inherit', fontWeight: 700, textTransform: 'capitalize' }}>{s.severity}</td>
+                                            <td>{parseInt(s.occurrences).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {stats?.topCves?.length > 0 && (
+                        <div className="breakdown-card full-width">
+                            <h3>Known CVE Exploit Attempts</h3>
+                            <table className="breakdown-table">
+                                <thead><tr><th>CVE</th><th>Attempts</th><th>Unique IPs</th><th>Last Seen</th></tr></thead>
+                                <tbody>
+                                    {stats.topCves.map(c => (
+                                        <tr key={c.cve}>
+                                            <td className="mono" style={{ fontWeight: 600 }}>{c.cve}</td>
+                                            <td>{parseInt(c.occurrences).toLocaleString()}</td>
+                                            <td>{parseInt(c.unique_ips).toLocaleString()}</td>
+                                            <td className="td-time">
+                                                <span className="time-date">{formatDate(c.last_seen)}</span>
+                                                <span className="time-clock">{formatTs(c.last_seen)}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {stats?.topTargetedPaths?.length > 0 && (
+                        <div className="breakdown-card full-width">
+                            <h3>Top Targeted Paths</h3>
+                            <table className="breakdown-table">
+                                <thead><tr><th>Path</th><th>Attacks</th><th>Unique IPs</th></tr></thead>
+                                <tbody>
+                                    {stats.topTargetedPaths.map(p => (
+                                        <tr key={p.path}>
+                                            <td className="mono">{p.path}</td>
+                                            <td>{parseInt(p.attacks).toLocaleString()}</td>
+                                            <td>{parseInt(p.unique_ips).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    <div className="breakdown-card full-width">
+                        <h3>Novel / Unclassified — triage queue</h3>
+                        <p className="empty-msg" style={{ marginTop: 0 }}>Attack-shaped requests that matched no known signature. Click to inspect.</p>
+                        {!suspicious.length
+                            ? <p className="empty-msg">Nothing awaiting triage.</p>
+                            : <table className="breakdown-table">
+                                <thead><tr><th>Time</th><th>Method</th><th>Path</th><th>IP</th><th>Anomaly</th></tr></thead>
+                                <tbody>
+                                    {suspicious.map(r => (
+                                        <tr key={r.id} className="clickable" onClick={() => setSelected(r)}>
+                                            <td className="td-time">
+                                                <span className="time-date">{formatDate(r.timestamp)}</span>
+                                                <span className="time-clock">{formatTs(r.timestamp)}</span>
+                                            </td>
+                                            <td><span style={{ color: METHOD_COLORS[r.method] || '#fff', fontWeight: 600 }}>{r.method}</span></td>
+                                            <td className="mono">{r.path}</td>
+                                            <td className="mono">{r.cf_connecting_ip || r.ip_address || '—'}</td>
+                                            <td style={{ fontWeight: 700 }}>{r.anomaly_score ?? '—'}</td>
                                         </tr>
                                     ))}
                                 </tbody>

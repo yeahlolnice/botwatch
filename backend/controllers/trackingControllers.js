@@ -16,6 +16,10 @@ import {
     getThreatBreakdownQuery,
     getHoneypotHitsQuery,
     getTopAttackingIPsQuery,
+    getAttackIntentBreakdownQuery,
+    getAttackSeverityBreakdownQuery,
+    getTopCvesQuery,
+    getTopTargetedPathsQuery,
 } from "../utilities/sqlTrackingQuerys.js";
 
 // Middleware — registers a finish listener so status code + timing are captured
@@ -211,6 +215,27 @@ const getRecentRequests = async (req, res) => {
             conditions.push(`bot_score >= $${params.length}`);
         }
 
+        // --- Attack-classification filters (payload analysis) ---
+        if (req.query.intent) {
+            params.push(req.query.intent);
+            conditions.push(`attack_intent = $${params.length}`);
+        }
+
+        const SEVERITY_RANK = { low: 1, medium: 2, high: 3, critical: 4 };
+        if (req.query.minSeverity && SEVERITY_RANK[req.query.minSeverity]) {
+            params.push(SEVERITY_RANK[req.query.minSeverity]);
+            conditions.push(`CASE attack_severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END >= $${params.length}`);
+        }
+
+        if (req.query.cve) {
+            params.push(JSON.stringify([req.query.cve]));
+            conditions.push(`cve_ids @> $${params.length}::jsonb`);
+        }
+
+        if (req.query.suspicious === 'true') {
+            conditions.push(`suspicious_unclassified = TRUE`);
+        }
+
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
         const dataParams = [...params, limit, offset];
@@ -226,6 +251,8 @@ const getRecentRequests = async (req, res) => {
                 bot_label, crawler_type, bot_score,
                 is_trap, trap_type,
                 threat_signals,
+                attack_intent, attack_severity, cve_ids,
+                anomaly_score, anomaly_signals, suspicious_unclassified,
                 accept_language, sec_fetch_site, sec_fetch_mode,
                 country
             FROM request_tracking
@@ -259,7 +286,8 @@ const getRecentRequests = async (req, res) => {
 // GET /api/traffic/stats — summary stats for dashboard
 const getTrafficStats = async (req, res) => {
     try {
-        const [stats, topAgents, methods, statuses, threats, honeypots, attackers] = await Promise.all([
+        const [stats, topAgents, methods, statuses, threats, honeypots, attackers,
+            intents, severities, cves, targetedPaths] = await Promise.all([
             query(getTrafficStatsQuery),
             query(getTopUserAgentsQuery, [20]),
             query(getMethodBreakdownQuery),
@@ -267,6 +295,10 @@ const getTrafficStats = async (req, res) => {
             query(getThreatBreakdownQuery),
             query(getHoneypotHitsQuery),
             query(getTopAttackingIPsQuery, [20]),
+            query(getAttackIntentBreakdownQuery),
+            query(getAttackSeverityBreakdownQuery),
+            query(getTopCvesQuery),
+            query(getTopTargetedPathsQuery),
         ]);
 
         res.json({
@@ -277,6 +309,10 @@ const getTrafficStats = async (req, res) => {
             threatBreakdown: threats.rows,
             honeypotHits: honeypots.rows,
             topAttackingIPs: attackers.rows,
+            attackIntents: intents.rows,
+            attackSeverities: severities.rows,
+            topCves: cves.rows,
+            topTargetedPaths: targetedPaths.rows,
         });
     } catch (error) {
         console.error('Error fetching stats:', error);

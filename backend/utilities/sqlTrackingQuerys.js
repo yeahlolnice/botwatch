@@ -184,6 +184,49 @@ GROUP BY category
 ORDER BY occurrences DESC
 `;
 
+// --- Attack-analysis rollups (payload classification) ---
+
+export const getAttackIntentBreakdownQuery = `
+SELECT attack_intent AS intent,
+       COUNT(*)                   AS occurrences,
+       COUNT(DISTINCT ip_address) AS unique_ips
+FROM request_tracking
+WHERE attack_intent IS NOT NULL
+GROUP BY attack_intent
+ORDER BY occurrences DESC
+`;
+
+export const getAttackSeverityBreakdownQuery = `
+SELECT attack_severity AS severity, COUNT(*) AS occurrences
+FROM request_tracking
+WHERE attack_severity IS NOT NULL
+GROUP BY attack_severity
+`;
+
+export const getTopCvesQuery = `
+SELECT cve AS cve,
+       COUNT(*)                   AS occurrences,
+       COUNT(DISTINCT ip_address) AS unique_ips,
+       MAX(timestamp)             AS last_seen
+FROM request_tracking,
+     jsonb_array_elements_text(cve_ids) AS cve
+WHERE cve_ids IS NOT NULL AND jsonb_array_length(cve_ids) > 0
+GROUP BY cve
+ORDER BY occurrences DESC
+LIMIT 20
+`;
+
+export const getTopTargetedPathsQuery = `
+SELECT path,
+       COUNT(*)                   AS attacks,
+       COUNT(DISTINCT ip_address) AS unique_ips
+FROM request_tracking
+WHERE attack_intent IS NOT NULL OR suspicious_unclassified = TRUE
+GROUP BY path
+ORDER BY attacks DESC
+LIMIT 20
+`;
+
 export const getHoneypotHitsQuery = `
 SELECT
     trap_type,
