@@ -1,11 +1,12 @@
 import { query } from '../utilities/connectDB.js';
 import { getDomainByHostname, getDomainHasJsonLd } from '../crawler/db.js';
 import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichmentQuerys.js';
-import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery } from '../utilities/sqlCrawlerQuerys.js';
+import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery, getDomainJsonLdTypesQuery } from '../utilities/sqlCrawlerQuerys.js';
 import { assessReadiness } from '../crawler/readinessAssessment.js';
 import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
 import { getCohortComparison } from '../crawler/cohort.js';
 import { buildAiCrawlerMatrix } from '../crawler/aiCrawlerMatrix.js';
+import { buildStructuredDataDepth } from '../crawler/structuredData.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -47,6 +48,24 @@ const gradeKind = (g) => {
     return 'neutral';
 };
 
+// Structured-data depth — which schema.org @types the site publishes. Rendered
+// inside the AI Readiness pillar; empty string when no JSON-LD types found.
+function renderStructuredData(sd) {
+    if (!sd) return '';
+    const typeChips = sd.types.map((t) => chip(t.type, 'good')).join('');
+    const overflow = sd.overflow > 0 ? `<span class="chip chip--neutral">+${sd.overflow} more</span>` : '';
+    const missing = sd.foundational.filter((f) => !f.present).map((f) => f.type);
+    const foundLine = missing.length === 0
+        ? 'It covers the foundational types (Organization, WebSite, BreadcrumbList) that help agents identify the business and navigate it.'
+        : `Foundational types that would help most agents are missing: ${missing.map((t) => `<code>${esc(t)}</code>`).join(', ')}.`;
+    return `
+      <div class="matrix">
+        <div class="matrix-head"><h3>Structured data</h3>${chip(`${sd.distinctCount} type${sd.distinctCount === 1 ? '' : 's'}`, 'good')}</div>
+        <p class="why">The schema.org types this site marks up with JSON-LD. Richer, well-typed markup lets AI answer engines and rich results extract facts — products, prices, FAQs, articles — instead of guessing from raw text. ${foundLine}</p>
+        <div class="sd-chips">${typeChips}${overflow}</div>
+      </div>`;
+}
+
 // AI-crawler access matrix — which named AI systems this site's robots.txt lets
 // in. Rendered inside the AI Readiness pillar; empty string when no policy.
 function renderCrawlerMatrix(matrix) {
@@ -85,7 +104,7 @@ function renderSimilar(hostname, cohort) {
       </div>`;
 }
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix }) {
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData }) {
     const title = found
         ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
@@ -114,6 +133,7 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
         <div class="pcard-head"><h2>AI Readiness</h2>${chip(`${legibility.present}/${legibility.total} signals`, bandKind(band))}</div>
         <p class="why">AI assistants and answer engines increasingly read the web through automated agents. Sites that publish an <code>llms.txt</code> index, structured data, and a clear AI-crawler policy get represented accurately in AI answers — the rest get guessed at, misquoted, or skipped.</p>
         <ul class="signals">${legibility.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
+        ${renderStructuredData(structuredData)}
         ${renderCrawlerMatrix(crawlerMatrix)}
       </div>
 
@@ -221,6 +241,8 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
   .crawl-id{display:flex;flex-direction:column;line-height:1.3;min-width:0}
   .crawl-id b{font-size:13px}
   .crawl-id span{font-family:var(--mono);font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sd-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .sd-chips .chip{font-family:var(--mono);text-transform:none;letter-spacing:0;font-size:12px}
   .pcard-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
   .pcard-head h2{margin:0;font-size:18px}
   .chip{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:5px 12px;border-radius:20px;white-space:nowrap}
@@ -296,11 +318,12 @@ export const getCompanyProfile = async (req, res) => {
             return res.status(200).type('html').send(renderPage({ hostname, found: false }));
         }
 
-        const [jsonLdFound, webmcpRows, enr, cohort] = await Promise.all([
+        const [jsonLdFound, webmcpRows, enr, cohort, jsonLdTypeRows] = await Promise.all([
             getDomainHasJsonLd(domain.id),
             query(getDomainWebmcpRowsQuery, [domain.id]).then((r) => r.rows).catch(() => []),
             query(getLatestDomainEnrichmentQuery, [domain.id]).then((r) => r.rows[0] || null).catch(() => null),
             getCohortComparison(domain).catch(() => null),
+            query(getDomainJsonLdTypesQuery, [domain.id]).then((r) => r.rows).catch(() => []),
         ]);
 
         const webmcp = aggregateWebmcp(webmcpRows);
@@ -328,6 +351,7 @@ export const getCompanyProfile = async (req, res) => {
             updatedAt: domain.updated_at,
             cohort,
             crawlerMatrix: buildAiCrawlerMatrix(domain.ai_training_policy, domain.ai_training_policy_explicit),
+            structuredData: buildStructuredDataDepth(jsonLdTypeRows),
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);
