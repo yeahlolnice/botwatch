@@ -245,6 +245,13 @@ export const getDomainHasJsonLdQuery = `
 SELECT EXISTS(SELECT 1 FROM pages WHERE domain_id = $1 AND json_ld_found = TRUE) AS has_json_ld;
 `;
 
+// Every crawled page's JSON-LD @type list for a domain, to aggregate which
+// schema.org types the site publishes (structured-data depth on the profile).
+export const getDomainJsonLdTypesQuery = `
+SELECT json_ld_types FROM pages
+WHERE domain_id = $1 AND json_ld_types IS NOT NULL;
+`;
+
 // --- pages ---
 
 export const ensurePageQuery = `
