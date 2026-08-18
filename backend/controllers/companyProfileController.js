@@ -67,6 +67,24 @@ function renderStructuredData(sd) {
       </div>`;
 }
 
+// Content licensing / TDM — the site's machine-readable AI-usage preferences.
+// Rendered inside the AI Readiness pillar; empty string when none expressed.
+function renderContentLicensing(cl) {
+    if (!cl) return '';
+    const items = [];
+    if (cl.noai) items.push('Opts out of AI text training (<code>noai</code>)');
+    if (cl.noimageai) items.push('Opts out of AI image training (<code>noimageai</code>)');
+    if (cl.tdmReserved) items.push('Reserves text &amp; data-mining rights (TDM Reservation Protocol)');
+    if (cl.tdmPolicy) items.push(`Publishes a TDM policy: <code>${esc(cl.tdmPolicy)}</code>`);
+    if (items.length === 0) return '';
+    return `
+      <div class="matrix">
+        <div class="matrix-head"><h3>Content licensing &amp; AI usage</h3>${chip('Preferences set', 'good')}</div>
+        <p class="why">This site expresses machine-readable preferences about how AI may use its content. Agents and training crawlers that honour these should adapt accordingly.</p>
+        <ul class="signals">${items.map((t) => `<li class="yes"><span>●</span>${t}</li>`).join('')}</ul>
+      </div>`;
+}
+
 // Agent discoverability — machine-readable entry points an agent uses to orient.
 // Rendered inside the WebMCP (actionability) pillar; empty string when null.
 function renderDiscoverability(d) {
@@ -117,7 +135,7 @@ function renderSimilar(hostname, cohort) {
       </div>`;
 }
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData, discoverability }) {
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData, discoverability, contentLicensing }) {
     const title = found
         ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
@@ -148,6 +166,7 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
         <ul class="signals">${legibility.checks.filter((c) => !c.notApplicable).map(signalRow).join('')}</ul>
         ${renderStructuredData(structuredData)}
         ${renderCrawlerMatrix(crawlerMatrix)}
+        ${renderContentLicensing(contentLicensing)}
       </div>
 
       <div class="pcard act">
@@ -367,6 +386,7 @@ export const getCompanyProfile = async (req, res) => {
             crawlerMatrix: buildAiCrawlerMatrix(domain.ai_training_policy, domain.ai_training_policy_explicit),
             structuredData: buildStructuredDataDepth(jsonLdTypeRows),
             discoverability: buildDiscoverability({ domain, webmcp, jsonLdFound }),
+            contentLicensing: domain.content_licensing || null,
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);

@@ -90,6 +90,15 @@ export const addDomainRootDomainIndexQuery = `
 CREATE INDEX IF NOT EXISTS idx_domains_root_domain ON domains (root_domain);
 `;
 
+// A site's AI/TDM content-usage preferences (noai/noimageai, TDM reservation).
+export const addDomainContentLicensingColumnQuery = `
+ALTER TABLE domains ADD COLUMN IF NOT EXISTS content_licensing JSONB;
+`;
+
+export const updateDomainContentLicensingQuery = `
+UPDATE domains SET content_licensing = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
+`;
+
 export const addPageContentColumnsQuery = `
 ALTER TABLE pages
   ADD COLUMN IF NOT EXISTS title TEXT,

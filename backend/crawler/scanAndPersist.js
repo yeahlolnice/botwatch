@@ -7,6 +7,7 @@ import { checkLlmsTxtForDomain, checkAiTxtForDomain } from './aiReadiness.js';
 import { looksLikeTermsPath } from './termsLinkDetector.js';
 import { classifyCategory } from './categoryClassifier.js';
 import { detectTechStack } from './techStackDetector.js';
+import { detectContentLicensing } from './contentLicensing.js';
 import { isHostnameBlocked } from './ssrfGuard.js';
 import { recomputeAndStoreDomainScore } from './aiReadinessScore.js';
 import { enrichDomain } from '../enrichment/enrichDomain.js';
@@ -21,6 +22,7 @@ import {
     updateDomainAiTrainingPolicy,
     updateDomainRobotsTxtFound,
     updateDomainProfile,
+    updateDomainContentLicensing,
     updatePageAiReadiness,
     updatePageWebmcp,
 } from './db.js';
@@ -75,6 +77,7 @@ export async function scanAndPersistDomain(rawUrl) {
                 html: homepage.html, scriptSrcs: pp.scriptSrcs, metaGenerator: pp.metaGenerator, techHeaders: homepage.techHeaders,
             });
             await updateDomainProfile(domain.id, { category: classifyCategory(jsonLdResult.types), techStack, termsUrl });
+            await updateDomainContentLicensing(domain.id, detectContentLicensing(homepage.html));
         }
 
         await updateDomainAiReadiness(domain.id, { found: !!llms.found, content: llms.content || null });
