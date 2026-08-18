@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { query } from "../utilities/connectDB.js";
 import { classifyUserAgent } from "../utilities/botClassifier.js";
 import { analyzeRequest } from "../utilities/payloadAnalyzer.js";
+import { scoreAnomaly, ANOMALY_THRESHOLD } from "../utilities/payloadAnomaly.js";
 import {
     createRequestTrackingTableQuery,
     migrateTrackingTableQuery,
@@ -15,6 +16,10 @@ import {
     getThreatBreakdownQuery,
     getHoneypotHitsQuery,
     getTopAttackingIPsQuery,
+    getAttackIntentBreakdownQuery,
+    getAttackSeverityBreakdownQuery,
+    getTopCvesQuery,
+    getTopTargetedPathsQuery,
 } from "../utilities/sqlTrackingQuerys.js";
 
 // Middleware — registers a finish listener so status code + timing are captured
@@ -35,8 +40,8 @@ const trackRequest = (req, res, next) => {
 
     // Run payload analysis synchronously before next() so req.threatAnalysis
     // is available to honeypot handlers if they want to read it
-    const { signals, threatScore } = analyzeRequest(req);
-    req.threatAnalysis = { signals, threatScore };
+    const { signals, threatScore, classification } = analyzeRequest(req);
+    req.threatAnalysis = { signals, threatScore, classification };
 
     res.on('finish', async () => {
         try {
@@ -118,6 +123,17 @@ const trackRequest = (req, res, next) => {
             const rawBodyBytes = stripCredentials ? null : (req.rawBodyBytes ?? null);
             const rawBodyTruncated = stripCredentials ? false : (req.rawBodyTruncated ?? false);
 
+            // Novel-payload / anomaly signal. Run on stripping-aware parts so a
+            // stripped signup body never leaks into anomaly excerpts. Flag as
+            // "unclassified suspicious" only when no known signature matched.
+            const anomalyParts = {
+                method, path, originalUrl: req.originalUrl,
+                query: queryParams, headers,
+                rawBody, body: stripCredentials ? null : body,
+            };
+            const { anomalyScore, reasons: anomalyReasons } = scoreAnomaly(anomalyParts);
+            const suspiciousUnclassified = anomalyScore >= ANOMALY_THRESHOLD && signals.length === 0;
+
             await query(insertRequestQuery, [
                 method, path, fullUrl,
                 Object.keys(queryParams).length ? JSON.stringify(queryParams) : null,
@@ -136,6 +152,11 @@ const trackRequest = (req, res, next) => {
                 // Country from Cloudflare header — free, no API needed
                 headers['cf-ipcountry'] || null,
                 null, null, null, null, // region, city, asn, provider — reserved for enrichment
+                classification.primaryIntent, classification.severity,
+                classification.cves.length ? JSON.stringify(classification.cves) : null,
+                anomalyScore,
+                anomalyReasons.length ? JSON.stringify(anomalyReasons) : null,
+                suspiciousUnclassified,
             ]);
         } catch (error) {
             console.error('Tracking error:', error.message);
@@ -194,6 +215,27 @@ const getRecentRequests = async (req, res) => {
             conditions.push(`bot_score >= $${params.length}`);
         }
 
+        // --- Attack-classification filters (payload analysis) ---
+        if (req.query.intent) {
+            params.push(req.query.intent);
+            conditions.push(`attack_intent = $${params.length}`);
+        }
+
+        const SEVERITY_RANK = { low: 1, medium: 2, high: 3, critical: 4 };
+        if (req.query.minSeverity && SEVERITY_RANK[req.query.minSeverity]) {
+            params.push(SEVERITY_RANK[req.query.minSeverity]);
+            conditions.push(`CASE attack_severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END >= $${params.length}`);
+        }
+
+        if (req.query.cve) {
+            params.push(JSON.stringify([req.query.cve]));
+            conditions.push(`cve_ids @> $${params.length}::jsonb`);
+        }
+
+        if (req.query.suspicious === 'true') {
+            conditions.push(`suspicious_unclassified = TRUE`);
+        }
+
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
         const dataParams = [...params, limit, offset];
@@ -209,6 +251,8 @@ const getRecentRequests = async (req, res) => {
                 bot_label, crawler_type, bot_score,
                 is_trap, trap_type,
                 threat_signals,
+                attack_intent, attack_severity, cve_ids,
+                anomaly_score, anomaly_signals, suspicious_unclassified,
                 accept_language, sec_fetch_site, sec_fetch_mode,
                 country
             FROM request_tracking
@@ -242,7 +286,8 @@ const getRecentRequests = async (req, res) => {
 // GET /api/traffic/stats — summary stats for dashboard
 const getTrafficStats = async (req, res) => {
     try {
-        const [stats, topAgents, methods, statuses, threats, honeypots, attackers] = await Promise.all([
+        const [stats, topAgents, methods, statuses, threats, honeypots, attackers,
+            intents, severities, cves, targetedPaths] = await Promise.all([
             query(getTrafficStatsQuery),
             query(getTopUserAgentsQuery, [20]),
             query(getMethodBreakdownQuery),
@@ -250,6 +295,10 @@ const getTrafficStats = async (req, res) => {
             query(getThreatBreakdownQuery),
             query(getHoneypotHitsQuery),
             query(getTopAttackingIPsQuery, [20]),
+            query(getAttackIntentBreakdownQuery),
+            query(getAttackSeverityBreakdownQuery),
+            query(getTopCvesQuery),
+            query(getTopTargetedPathsQuery),
         ]);
 
         res.json({
@@ -260,6 +309,10 @@ const getTrafficStats = async (req, res) => {
             threatBreakdown: threats.rows,
             honeypotHits: honeypots.rows,
             topAttackingIPs: attackers.rows,
+            attackIntents: intents.rows,
+            attackSeverities: severities.rows,
+            topCves: cves.rows,
+            topTargetedPaths: targetedPaths.rows,
         });
     } catch (error) {
         console.error('Error fetching stats:', error);

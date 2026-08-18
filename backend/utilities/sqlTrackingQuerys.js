@@ -60,13 +60,21 @@ CREATE TABLE IF NOT EXISTS request_tracking (
 );
 `;
 
-// Run after CREATE TABLE to add threat_signals to existing installations
+// Run after CREATE TABLE to add threat_signals to existing installations.
+// attack_intent/severity/cve_ids are denormalized from the payload analyzer's
+// classification; anomaly_* hold the novel-payload (0-day) triage signal.
 export const migrateTrackingTableQuery = `
 ALTER TABLE request_tracking
     ADD COLUMN IF NOT EXISTS threat_signals JSONB,
     ADD COLUMN IF NOT EXISTS raw_body TEXT,
     ADD COLUMN IF NOT EXISTS raw_body_bytes INT,
-    ADD COLUMN IF NOT EXISTS raw_body_truncated BOOLEAN;
+    ADD COLUMN IF NOT EXISTS raw_body_truncated BOOLEAN,
+    ADD COLUMN IF NOT EXISTS attack_intent TEXT,
+    ADD COLUMN IF NOT EXISTS attack_severity TEXT,
+    ADD COLUMN IF NOT EXISTS cve_ids JSONB,
+    ADD COLUMN IF NOT EXISTS anomaly_score INT,
+    ADD COLUMN IF NOT EXISTS anomaly_signals JSONB,
+    ADD COLUMN IF NOT EXISTS suspicious_unclassified BOOLEAN;
 `;
 
 export const insertRequestQuery = `
@@ -82,7 +90,8 @@ INSERT INTO request_tracking (
     is_trap, trap_type, bot_score, bot_label, crawler_type,
     threat_signals,
     js_enabled, screen_width, screen_height, timezone,
-    country, region, city, asn, provider
+    country, region, city, asn, provider,
+    attack_intent, attack_severity, cve_ids, anomaly_score, anomaly_signals, suspicious_unclassified
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6,
@@ -95,7 +104,8 @@ INSERT INTO request_tracking (
     $27, $28, $29, $30, $31,
     $32,
     $33, $34, $35, $36,
-    $37, $38, $39, $40, $41
+    $37, $38, $39, $40, $41,
+    $42, $43, $44, $45, $46, $47
 )`;
 
 // NOTE: intentionally does NOT select body / raw_body. Those columns can hold
@@ -174,6 +184,49 @@ GROUP BY category
 ORDER BY occurrences DESC
 `;
 
+// --- Attack-analysis rollups (payload classification) ---
+
+export const getAttackIntentBreakdownQuery = `
+SELECT attack_intent AS intent,
+       COUNT(*)                   AS occurrences,
+       COUNT(DISTINCT ip_address) AS unique_ips
+FROM request_tracking
+WHERE attack_intent IS NOT NULL
+GROUP BY attack_intent
+ORDER BY occurrences DESC
+`;
+
+export const getAttackSeverityBreakdownQuery = `
+SELECT attack_severity AS severity, COUNT(*) AS occurrences
+FROM request_tracking
+WHERE attack_severity IS NOT NULL
+GROUP BY attack_severity
+`;
+
+export const getTopCvesQuery = `
+SELECT cve AS cve,
+       COUNT(*)                   AS occurrences,
+       COUNT(DISTINCT ip_address) AS unique_ips,
+       MAX(timestamp)             AS last_seen
+FROM request_tracking,
+     jsonb_array_elements_text(cve_ids) AS cve
+WHERE cve_ids IS NOT NULL AND jsonb_array_length(cve_ids) > 0
+GROUP BY cve
+ORDER BY occurrences DESC
+LIMIT 20
+`;
+
+export const getTopTargetedPathsQuery = `
+SELECT path,
+       COUNT(*)                   AS attacks,
+       COUNT(DISTINCT ip_address) AS unique_ips
+FROM request_tracking
+WHERE attack_intent IS NOT NULL OR suspicious_unclassified = TRUE
+GROUP BY path
+ORDER BY attacks DESC
+LIMIT 20
+`;
+
 export const getHoneypotHitsQuery = `
 SELECT
     trap_type,
@@ -184,6 +237,32 @@ FROM request_tracking
 WHERE is_trap = TRUE
 GROUP BY trap_type
 ORDER BY hits DESC
+`;
+
+// --- Reclassify (reprocess stored requests through the upgraded analyzer) ---
+// Pulls the columns the analyzer needs to rebuild its inspection targets from a
+// stored row. Id-keyed pagination (WHERE id > $1) so a batch job can stream the
+// whole table. $2 = batch size; $3 = when true, only rows not yet classified.
+export const getRequestsForReclassifyQuery = `
+SELECT id, method, path, full_url, query_params, headers, body, raw_body, user_agent
+FROM request_tracking
+WHERE id > $1
+  AND ($3 = FALSE OR attack_intent IS NULL)
+ORDER BY id ASC
+LIMIT $2
+`;
+
+export const updateRequestClassificationQuery = `
+UPDATE request_tracking SET
+    threat_signals = $2,
+    bot_score = $3,
+    attack_intent = $4,
+    attack_severity = $5,
+    cve_ids = $6,
+    anomaly_score = $7,
+    anomaly_signals = $8,
+    suspicious_unclassified = $9
+WHERE id = $1
 `;
 
 export const getTopAttackingIPsQuery = `
