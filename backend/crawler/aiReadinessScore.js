@@ -1,4 +1,6 @@
 import { getDomainByHostname, getDomainHasJsonLd, updateDomainAiReadinessScore } from './db.js';
+import { query } from '../utilities/connectDB.js';
+import { insertDomainScoreHistoryQuery } from '../utilities/sqlCrawlerQuerys.js';
 
 // Additive 0-100 AI-readiness score. Each signal contributes independently —
 // this isn't meant to be a precise measurement, just a rough at-a-glance
@@ -54,6 +56,11 @@ export async function recomputeAndStoreDomainScore(domainId, hostname) {
         humansTxtFound: domain.humans_txt_found,
         termsUrlFound: !!domain.terms_url,
     });
+
+    // Append a time-series reading (deduped against the last one at the SQL
+    // level) so the profile can show an adoption trend. Best-effort — a history
+    // failure must never break scoring.
+    await query(insertDomainScoreHistoryQuery, [domainId, score]).catch(() => {});
 
     return updateDomainAiReadinessScore(domainId, score);
 }

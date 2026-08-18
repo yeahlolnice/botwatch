@@ -1,13 +1,14 @@
 import { query } from '../utilities/connectDB.js';
 import { getDomainByHostname, getDomainHasJsonLd } from '../crawler/db.js';
 import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichmentQuerys.js';
-import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery, getDomainJsonLdTypesQuery } from '../utilities/sqlCrawlerQuerys.js';
+import { getDomainWebmcpRowsQuery, getProfiledHostnamesQuery, getDomainJsonLdTypesQuery, getDomainScoreHistoryQuery } from '../utilities/sqlCrawlerQuerys.js';
 import { assessReadiness } from '../crawler/readinessAssessment.js';
 import { scanAndPersistDomain } from '../crawler/scanAndPersist.js';
 import { getCohortComparison } from '../crawler/cohort.js';
 import { buildAiCrawlerMatrix } from '../crawler/aiCrawlerMatrix.js';
 import { buildStructuredDataDepth } from '../crawler/structuredData.js';
 import { buildDiscoverability } from '../crawler/discoverability.js';
+import { buildReadinessTrend } from '../crawler/readinessTrend.js';
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
@@ -64,6 +65,34 @@ function renderStructuredData(sd) {
         <div class="matrix-head"><h3>Structured data</h3>${chip(`${sd.distinctCount} type${sd.distinctCount === 1 ? '' : 's'}`, 'good')}</div>
         <p class="why">The schema.org types this site marks up with JSON-LD. Richer, well-typed markup lets AI answer engines and rich results extract facts — products, prices, FAQs, articles — instead of guessing from raw text. ${foundLine}</p>
         <div class="sd-chips">${typeChips}${overflow}</div>
+      </div>`;
+}
+
+// Readiness trend — a sparkline of the site's AI-readiness score over time.
+// Rendered inside the AI Readiness pillar; empty string until 2+ readings.
+function sparkline(scores) {
+    const w = 180, h = 36, pad = 3;
+    const max = 100, min = 0; // scores are a fixed 0-100 scale
+    const step = scores.length > 1 ? (w - pad * 2) / (scores.length - 1) : 0;
+    const y = (s) => h - pad - ((s - min) / (max - min)) * (h - pad * 2);
+    const pts = scores.map((s, i) => `${(pad + i * step).toFixed(1)},${y(s).toFixed(1)}`).join(' ');
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+}
+
+function renderTrend(trend) {
+    if (!trend) return '';
+    const { delta, direction, readings, first, current } = trend;
+    const arrow = direction === 'up' ? '▲' : direction === 'down' ? '▼' : '■';
+    const kind = direction === 'up' ? 'good' : direction === 'down' ? 'bad' : 'neutral';
+    const label = direction === 'flat' ? 'No change' : `${arrow} ${delta > 0 ? '+' : ''}${delta}`;
+    const since = first.at ? new Date(first.at).toISOString().slice(0, 10) : null;
+    return `
+      <div class="matrix trend trend--${direction}">
+        <div class="matrix-head"><h3>Readiness trend</h3>${chip(label, kind)}</div>
+        <p class="why">How this site's AI-readiness score has moved as we've re-scanned it${since ? ` since ${esc(since)}` : ''} — ${readings} reading${readings === 1 ? '' : 's'}, now at <b>${current.score}/100</b>.</p>
+        ${sparkline(trend.scores)}
       </div>`;
 }
 
@@ -135,7 +164,7 @@ function renderSimilar(hostname, cohort) {
       </div>`;
 }
 
-export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData, discoverability, contentLicensing }) {
+export function renderPage({ hostname, found, band, legibility, actionability, webmcp, enrichment, category, updatedAt, cohort, crawlerMatrix, structuredData, discoverability, contentLicensing, trend }) {
     const title = found
         ? `${hostname} — AI readiness, WebMCP & security | botwatch`
         : `${hostname} — AI readiness | botwatch`;
@@ -167,6 +196,7 @@ export function renderPage({ hostname, found, band, legibility, actionability, w
         ${renderStructuredData(structuredData)}
         ${renderCrawlerMatrix(crawlerMatrix)}
         ${renderContentLicensing(contentLicensing)}
+        ${renderTrend(trend)}
       </div>
 
       <div class="pcard act">
@@ -276,6 +306,9 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
   .crawl-id span{font-family:var(--mono);font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sd-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
   .sd-chips .chip{font-family:var(--mono);text-transform:none;letter-spacing:0;font-size:12px}
+  .spark{display:block;margin-top:8px;color:var(--teal);width:180px;max-width:100%;height:36px}
+  .trend--down .spark{color:var(--red)}
+  .trend--flat .spark{color:var(--dim)}
   .pcard-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
   .pcard-head h2{margin:0;font-size:18px}
   .chip{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:5px 12px;border-radius:20px;white-space:nowrap}
@@ -351,12 +384,13 @@ export const getCompanyProfile = async (req, res) => {
             return res.status(200).type('html').send(renderPage({ hostname, found: false }));
         }
 
-        const [jsonLdFound, webmcpRows, enr, cohort, jsonLdTypeRows] = await Promise.all([
+        const [jsonLdFound, webmcpRows, enr, cohort, jsonLdTypeRows, scoreHistory] = await Promise.all([
             getDomainHasJsonLd(domain.id),
             query(getDomainWebmcpRowsQuery, [domain.id]).then((r) => r.rows).catch(() => []),
             query(getLatestDomainEnrichmentQuery, [domain.id]).then((r) => r.rows[0] || null).catch(() => null),
             getCohortComparison(domain).catch(() => null),
             query(getDomainJsonLdTypesQuery, [domain.id]).then((r) => r.rows).catch(() => []),
+            query(getDomainScoreHistoryQuery, [domain.id]).then((r) => r.rows).catch(() => []),
         ]);
 
         const webmcp = aggregateWebmcp(webmcpRows);
@@ -387,6 +421,7 @@ export const getCompanyProfile = async (req, res) => {
             structuredData: buildStructuredDataDepth(jsonLdTypeRows),
             discoverability: buildDiscoverability({ domain, webmcp, jsonLdFound }),
             contentLicensing: domain.content_licensing || null,
+            trend: buildReadinessTrend(scoreHistory),
         }));
     } catch (error) {
         console.error('Company profile error:', error.message);
