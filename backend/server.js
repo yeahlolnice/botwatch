@@ -88,6 +88,20 @@ app.get('/sitemap.xml', (req, res) => {
     res.type('application/xml').sendFile(join(__dirname, 'sitemap.xml'));
 });
 
+// Machine-readable responsible-disclosure policy (RFC 9116). Expires is required
+// by the spec, so it's generated one year out on each request to never go stale.
+app.get('/.well-known/security.txt', (req, res) => {
+    const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    res.type('text/plain').send(
+        `# Responsible disclosure policy for botwatch.xyz\n`
+        + `Contact: mailto:info@botwatch.xyz\n`
+        + `Expires: ${expires}\n`
+        + `Preferred-Languages: en\n`
+        + `Canonical: https://botwatch.xyz/.well-known/security.txt\n`
+        + `Policy: https://botwatch.xyz/contact\n`
+    );
+});
+
 // Public, server-rendered AI-readiness profile pages (programmatic SEO) — one
 // per crawled domain, plus their sitemap. Mounted before the SPA catch-all so
 // crawlers get real HTML, not the JS shell.

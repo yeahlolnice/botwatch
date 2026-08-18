@@ -1,0 +1,108 @@
+.contact {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.contact-head { margin-bottom: 32px; }
+.contact-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.contact-head h1 {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+.contact-lead {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text-dim);
+  max-width: 64ch;
+}
+
+.contact-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 24px 26px;
+  margin-top: 18px;
+}
+.contact-card--primary {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+.contact-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.contact-card p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-dim);
+  max-width: 64ch;
+}
+
+.contact-email {
+  display: inline-block;
+  margin: 14px 0 4px;
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: 9px;
+  background: var(--bg);
+}
+.contact-email:hover { border-color: var(--accent); }
+
+.contact-cols {
+  display: grid;
+  gap: 22px;
+  margin: 20px 0 4px;
+}
+@media (min-width: 560px) {
+  .contact-cols { grid-template-columns: 1fr 1fr; }
+}
+.contact-cols h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.contact-cols ul {
+  list-style: none;
+  padding: 0;
+}
+.contact-cols li {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  padding: 4px 0 4px 16px;
+  position: relative;
+}
+.contact-cols li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.contact-note {
+  margin-top: 18px !important;
+  font-size: 13px !important;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.contact-card a { color: var(--accent); }

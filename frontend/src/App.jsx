@@ -14,6 +14,7 @@ import ModelAdmin from './pages/ModelAdmin'
 import ApiKeys from './pages/ApiKeys'
 import ApiDocs from './pages/ApiDocs'
 import Pricing from './pages/Pricing'
+import Contact from './pages/Contact'
 import BillingSuccess from './pages/BillingSuccess'
 import Account from './pages/Account'
 import ResetPassword from './pages/ResetPassword'
@@ -74,6 +75,7 @@ function Nav() {
         <Link to="/search" className={pathname === '/search' ? 'active' : ''}>Search</Link>
         <Link to="/docs" className={pathname === '/docs' ? 'active' : ''}>API</Link>
         <Link to="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Pricing</Link>
+        <Link to="/contact" className={pathname === '/contact' ? 'active' : ''}>Contact</Link>
         {isResearch && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
         {isResearch && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
@@ -98,7 +100,10 @@ function Footer() {
   return (
     <footer className="site-footer">
       <span className="site-footer-copy">© {new Date().getFullYear()} botwatch.xyz</span>
-      <Link to="/login" className="site-footer-staff">Staff sign in</Link>
+      <span className="site-footer-links">
+        <Link to="/contact" className="site-footer-link">Contact</Link>
+        <Link to="/login" className="site-footer-staff">Staff sign in</Link>
+      </span>
     </footer>
   )
 }
@@ -117,6 +122,7 @@ export default function App() {
         <Route path="/search" element={<SiteSearch />} />
         <Route path="/docs" element={<ApiDocs />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/billing/success" element={<BillingSuccess />} />
         <Route path="/account" element={<Account />} />
         <Route path="/account/reset" element={<ResetPassword />} />

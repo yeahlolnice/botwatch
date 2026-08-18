@@ -203,6 +203,16 @@
   font-size: 12px;
   color: var(--text-dim);
 }
+.site-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.site-footer-link {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.site-footer-link:hover { color: var(--text); }
 .site-footer-staff {
   color: var(--text-dim);
   text-decoration: none;
