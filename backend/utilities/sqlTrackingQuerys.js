@@ -239,6 +239,22 @@ GROUP BY trap_type
 ORDER BY hits DESC
 `;
 
+// Daily attack volume over the last 30 days — attack requests, distinct
+// attacking IPs, and honeypot hits per day. "Attacking" = tripped a
+// signature/intent, hit a honeypot, scored > 0, or was flagged novel.
+// (Predicate inlined rather than shared so this stays independent of the
+// attacker-infrastructure change.)
+export const getAttackTrendQuery = `
+SELECT date_trunc('day', timestamp) AS day,
+       COUNT(*) FILTER (WHERE attack_intent IS NOT NULL OR is_trap = TRUE OR bot_score > 0 OR suspicious_unclassified = TRUE) AS attacks,
+       COUNT(DISTINCT ip_address) FILTER (WHERE attack_intent IS NOT NULL OR is_trap = TRUE OR bot_score > 0 OR suspicious_unclassified = TRUE) AS ips,
+       COUNT(*) FILTER (WHERE is_trap = TRUE) AS trap_hits
+FROM request_tracking
+WHERE timestamp > NOW() - INTERVAL '30 days'
+GROUP BY day
+ORDER BY day ASC
+`;
+
 // --- Reclassify (reprocess stored requests through the upgraded analyzer) ---
 // Pulls the columns the analyzer needs to rebuild its inspection targets from a
 // stored row. Id-keyed pagination (WHERE id > $1) so a batch job can stream the

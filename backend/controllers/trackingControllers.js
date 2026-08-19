@@ -20,6 +20,7 @@ import {
     getAttackSeverityBreakdownQuery,
     getTopCvesQuery,
     getTopTargetedPathsQuery,
+    getAttackTrendQuery,
 } from "../utilities/sqlTrackingQuerys.js";
 
 // Middleware — registers a finish listener so status code + timing are captured
@@ -287,7 +288,7 @@ const getRecentRequests = async (req, res) => {
 const getTrafficStats = async (req, res) => {
     try {
         const [stats, topAgents, methods, statuses, threats, honeypots, attackers,
-            intents, severities, cves, targetedPaths] = await Promise.all([
+            intents, severities, cves, targetedPaths, trend] = await Promise.all([
             query(getTrafficStatsQuery),
             query(getTopUserAgentsQuery, [20]),
             query(getMethodBreakdownQuery),
@@ -299,6 +300,7 @@ const getTrafficStats = async (req, res) => {
             query(getAttackSeverityBreakdownQuery),
             query(getTopCvesQuery),
             query(getTopTargetedPathsQuery),
+            query(getAttackTrendQuery),
         ]);
 
         res.json({
@@ -313,6 +315,7 @@ const getTrafficStats = async (req, res) => {
             attackSeverities: severities.rows,
             topCves: cves.rows,
             topTargetedPaths: targetedPaths.rows,
+            attackTrend: trend.rows,
         });
     } catch (error) {
         console.error('Error fetching stats:', error);
