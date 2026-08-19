@@ -810,6 +810,67 @@ export default function Dashboard() {
                             </table>
                         }
                     </div>
+
+                    {stats?.attacksByCountry?.length > 0 && (
+                        <div className="breakdown-card">
+                            <h3>Attack Origin — Country</h3>
+                            <table className="breakdown-table">
+                                <thead><tr><th>Country</th><th>IPs</th><th>Requests</th><th>Trap Hits</th></tr></thead>
+                                <tbody>
+                                    {stats.attacksByCountry.map(c => (
+                                        <tr key={c.country}>
+                                            <td style={{ fontWeight: 600 }}>{c.country}</td>
+                                            <td>{parseInt(c.ips).toLocaleString()}</td>
+                                            <td>{parseInt(c.requests).toLocaleString()}</td>
+                                            <td>{parseInt(c.trap_hits).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {stats?.attackInfraUsage?.length > 0 && (
+                        <div className="breakdown-card">
+                            <h3>Attack Infrastructure — Usage Type</h3>
+                            <p className="model-card-sub" style={{ margin: '0 0 10px' }}>
+                                Among enriched IPs{stats.torAttackers > 0 ? ` · ${stats.torAttackers} Tor exit node${stats.torAttackers === 1 ? '' : 's'}` : ''}.
+                            </p>
+                            <table className="breakdown-table">
+                                <thead><tr><th>Usage Type</th><th>IPs</th><th>Requests</th></tr></thead>
+                                <tbody>
+                                    {stats.attackInfraUsage.map(u => (
+                                        <tr key={u.usage_type}>
+                                            <td>{u.usage_type}</td>
+                                            <td>{parseInt(u.ips).toLocaleString()}</td>
+                                            <td>{parseInt(u.requests).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {stats?.topAttackerNetworks?.length > 0 && (
+                        <div className="breakdown-card full-width">
+                            <h3>Top Attacker Networks (ISP)</h3>
+                            <table className="breakdown-table">
+                                <thead><tr><th>ISP</th><th>Country</th><th>IPs</th><th>Requests</th><th>Max Score</th><th>Tor</th></tr></thead>
+                                <tbody>
+                                    {stats.topAttackerNetworks.map((n, i) => (
+                                        <tr key={`${n.isp}-${i}`}>
+                                            <td>{n.isp}</td>
+                                            <td>{n.country || '—'}</td>
+                                            <td>{parseInt(n.ips).toLocaleString()}</td>
+                                            <td>{parseInt(n.requests).toLocaleString()}</td>
+                                            <td><span style={{ color: scoreColor(parseInt(n.max_score)), fontWeight: 700 }}>{n.max_score ?? 0}</span></td>
+                                            <td>{n.has_tor ? '⚠' : '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
 
