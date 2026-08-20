@@ -292,8 +292,7 @@ const getRecentRequests = async (req, res) => {
 const getTrafficStats = async (req, res) => {
     try {
         const [stats, topAgents, methods, statuses, threats, honeypots, attackers,
-            intents, severities, cves, targetedPaths, trend] = await Promise.all([
-            intents, severities, cves, targetedPaths,
+            intents, severities, cves, targetedPaths, trend,
             byCountry, infraUsage, networks, torCount] = await Promise.all([
             query(getTrafficStatsQuery),
             query(getTopUserAgentsQuery, [20]),
