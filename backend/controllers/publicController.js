@@ -18,8 +18,20 @@ import {
     getDomainAggregatedContacts,
     getSubdomainCount,
 } from '../crawler/db.js';
-import { maskEmail, maskPhoneNumber } from '../utilities/maskingUtils.js';
+import { maskEmail, maskPhoneNumber, maskIp } from '../utilities/maskingUtils.js';
 import { getLatestDomainEnrichmentQuery } from '../utilities/sqlDomainEnrichmentQuerys.js';
+import {
+    getAttackTrendQuery,
+    getAttackIntentBreakdownQuery,
+    getAttackSeverityBreakdownQuery,
+    getTopCvesQuery,
+    getTopTargetedPathsQuery,
+    getTopAttackingIPsQuery,
+    getAttacksByCountryQuery,
+    getAttackInfraUsageQuery,
+    getTopAttackerNetworksQuery,
+    getHoneypotHitsQuery,
+} from '../utilities/sqlTrackingQuerys.js';
 
 const HOSTNAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 
@@ -58,6 +70,53 @@ export const getPublicIntel = async (req, res) => {
     } catch (error) {
         console.error('Public intel error:', error);
         return res.status(500).json({ error: 'Failed to fetch intel' });
+    }
+};
+
+// GET /api/public/threat-charts — the full set of aggregate threat charts shown
+// on the public Intel page (mirrors the admin Dashboard's threats/honeypots/
+// attackers tabs). Everything here is aggregate and safe to publish; attacker
+// IPs are masked server-side (first group only) before they ever leave.
+export const getPublicThreatCharts = async (req, res) => {
+    try {
+        const [trend, intents, severities, cves, paths, attackers, countries, infraUsage, networks, honeypots] =
+            await Promise.all([
+                query(getAttackTrendQuery),
+                query(getAttackIntentBreakdownQuery),
+                query(getAttackSeverityBreakdownQuery),
+                query(getTopCvesQuery),
+                query(getTopTargetedPathsQuery),
+                query(getTopAttackingIPsQuery, [20]),
+                query(getAttacksByCountryQuery),
+                query(getAttackInfraUsageQuery),
+                query(getTopAttackerNetworksQuery),
+                query(getHoneypotHitsQuery),
+            ]);
+
+        res.set('Cache-Control', 'public, max-age=60');
+        return res.json({
+            attackTrend: trend.rows,
+            attackIntents: intents.rows,
+            attackSeverities: severities.rows,
+            topCves: cves.rows,
+            topTargetedPaths: paths.rows,
+            topAttackingIPs: attackers.rows.map((r) => ({
+                ip: maskIp(r.ip_address),
+                total_requests: r.total_requests,
+                threat_requests: r.threat_requests,
+                honeypot_hits: r.honeypot_hits,
+                max_threat_score: r.max_threat_score,
+                last_seen: r.last_seen,
+                labels: (r.labels || []).filter(Boolean),
+            })),
+            attacksByCountry: countries.rows,
+            attackInfraUsage: infraUsage.rows,
+            topAttackerNetworks: networks.rows,
+            honeypotHits: honeypots.rows,
+        });
+    } catch (error) {
+        console.error('Public threat charts error:', error);
+        return res.status(500).json({ error: 'Failed to fetch threat charts' });
     }
 };
 

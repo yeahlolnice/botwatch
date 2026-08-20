@@ -301,3 +301,41 @@
   .country-traps, .country-threats { display: none; }
   .lb-stats { flex-direction: column; gap: 2px; }
 }
+
+/* --- Threat charts copied from the dashboard --- */
+.trend-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.intel-table { display: flex; flex-direction: column; gap: 2px; }
+.intel-table-head,
+.intel-table-row {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 8px;
+}
+.intel-table-head {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.intel-table-row {
+  font-size: 13px;
+  border-radius: 6px;
+}
+.intel-table-row:nth-child(even) { background: color-mix(in srgb, var(--surface2) 45%, transparent); }
+.cve-cols  { grid-template-columns: 1.6fr 0.8fr 0.8fr 1fr; }
+.path-cols { grid-template-columns: 3fr 0.8fr 0.8fr; }
+.ip-cols   { grid-template-columns: 1.6fr 0.9fr 0.8fr 0.7fr 0.6fr; }
+.net-cols  { grid-template-columns: 2fr 0.7fr 0.9fr; }
+.intel-table .mono { font-family: var(--mono); font-size: 12.5px; }
+.intel-table .dim { color: var(--text-dim); }
+.intel-table .threats { color: var(--orange); }
+.intel-table .traps { color: var(--accent); }
+.intel-table .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
