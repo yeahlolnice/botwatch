@@ -28,6 +28,7 @@ import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 import { runMigrations } from './utilities/runMigrations.js';
 import { startReportWorker } from './readiness/reportWorker.js';
 import { getCompanyProfile, getCompanySitemap } from './controllers/companyProfileController.js';
+import { getMethodology } from './controllers/methodologyController.js';
 
 dotenv.config();
 
@@ -107,6 +108,8 @@ app.get('/.well-known/security.txt', (req, res) => {
 // crawlers get real HTML, not the JS shell.
 app.get('/company/:hostname', getCompanyProfile);
 app.get('/sitemap-companies.xml', getCompanySitemap);
+// Server-rendered methodology / authority page (SEO) — real HTML for crawlers.
+app.get('/methodology', getMethodology);
 
 // Serve React build — after honeypots so trap paths are never short-circuited
 if (existsSync(frontendDist)) {
