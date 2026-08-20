@@ -118,6 +118,9 @@ export const getPublicThreatCharts = async (req, res) => {
     } catch (error) {
         console.error('Public threat charts error:', error);
         return res.status(500).json({ error: 'Failed to fetch threat charts' });
+    }
+};
+
 const csvEscapeList = (v) => {
     const s = v == null ? '' : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;

@@ -310,7 +310,7 @@ const getTrafficStats = async (req, res) => {
             query(getAttackInfraUsageQuery),
             query(getTopAttackerNetworksQuery),
             query(getTorAttackerCountQuery),
-        ]));
+        ]);
 
         res.json({
             summary: stats.rows[0],
