@@ -20,6 +20,7 @@ import {
     getAttackSeverityBreakdownQuery,
     getTopCvesQuery,
     getTopTargetedPathsQuery,
+    getAttackTrendQuery,
     getAttacksByCountryQuery,
     getAttackInfraUsageQuery,
     getTopAttackerNetworksQuery,
@@ -291,6 +292,7 @@ const getRecentRequests = async (req, res) => {
 const getTrafficStats = async (req, res) => {
     try {
         const [stats, topAgents, methods, statuses, threats, honeypots, attackers,
+            intents, severities, cves, targetedPaths, trend] = await Promise.all([
             intents, severities, cves, targetedPaths,
             byCountry, infraUsage, networks, torCount] = await Promise.all([
             query(getTrafficStatsQuery),
@@ -304,6 +306,7 @@ const getTrafficStats = async (req, res) => {
             query(getAttackSeverityBreakdownQuery),
             query(getTopCvesQuery),
             query(getTopTargetedPathsQuery),
+            query(getAttackTrendQuery),
             query(getAttacksByCountryQuery),
             query(getAttackInfraUsageQuery),
             query(getTopAttackerNetworksQuery),
@@ -322,6 +325,7 @@ const getTrafficStats = async (req, res) => {
             attackSeverities: severities.rows,
             topCves: cves.rows,
             topTargetedPaths: targetedPaths.rows,
+            attackTrend: trend.rows,
             attacksByCountry: byCountry.rows,
             attackInfraUsage: infraUsage.rows,
             topAttackerNetworks: networks.rows,

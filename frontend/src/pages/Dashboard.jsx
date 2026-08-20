@@ -95,6 +95,41 @@ function BotBadge({ label, type }) {
     )
 }
 
+// Daily attack-volume bars over the last 30 days. Pure SVG — no chart lib.
+function AttackTrendChart({ data }) {
+    if (!data || data.length < 2) return null
+    const vals = data.map(d => parseInt(d.attacks) || 0)
+    const max = Math.max(...vals, 1)
+    const W = 720, H = 150, pad = { l: 8, r: 8, t: 12, b: 22 }
+    const bw = (W - pad.l - pad.r) / data.length
+    return (
+        <div className="breakdown-card full-width">
+            <h3>Attack Volume — last 30 days</h3>
+            <div style={{ overflowX: 'auto' }}>
+                <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, height: 'auto', display: 'block' }}>
+                    {data.map((d, i) => {
+                        const v = parseInt(d.attacks) || 0
+                        const h = (v / max) * (H - pad.t - pad.b)
+                        const x = pad.l + i * bw
+                        const y = H - pad.b - h
+                        return (
+                            <rect key={i} x={x + 1} y={y} width={Math.max(bw - 2, 1)} height={h} fill="#ef4444" opacity="0.85">
+                                <title>{`${formatDate(d.day)}: ${v.toLocaleString()} attacks · ${parseInt(d.ips).toLocaleString()} IPs · ${parseInt(d.trap_hits).toLocaleString()} trap hits`}</title>
+                            </rect>
+                        )
+                    })}
+                    <line x1={pad.l} y1={H - pad.b} x2={W - pad.r} y2={H - pad.b} stroke="var(--border)" />
+                </svg>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                <span>{formatDate(data[0].day)}</span>
+                <span>peak {max.toLocaleString()}/day</span>
+                <span>{formatDate(data[data.length - 1].day)}</span>
+            </div>
+        </div>
+    )
+}
+
 function AbuseIpPanel({ ip }) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -613,6 +648,7 @@ export default function Dashboard() {
 
             {activeTab === 'threats' && (
                 <div className="breakdown-page">
+                    <AttackTrendChart data={stats?.attackTrend} />
                     <div className="breakdown-card full-width">
                         <h3>Attack Categories Detected</h3>
                         {!stats?.threatBreakdown?.length
