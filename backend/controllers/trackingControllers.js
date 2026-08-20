@@ -20,6 +20,11 @@ import {
     getAttackSeverityBreakdownQuery,
     getTopCvesQuery,
     getTopTargetedPathsQuery,
+    getAttackTrendQuery,
+    getAttacksByCountryQuery,
+    getAttackInfraUsageQuery,
+    getTopAttackerNetworksQuery,
+    getTorAttackerCountQuery,
 } from "../utilities/sqlTrackingQuerys.js";
 
 // Middleware — registers a finish listener so status code + timing are captured
@@ -287,7 +292,9 @@ const getRecentRequests = async (req, res) => {
 const getTrafficStats = async (req, res) => {
     try {
         const [stats, topAgents, methods, statuses, threats, honeypots, attackers,
-            intents, severities, cves, targetedPaths] = await Promise.all([
+            intents, severities, cves, targetedPaths, trend] = await Promise.all([
+            intents, severities, cves, targetedPaths,
+            byCountry, infraUsage, networks, torCount] = await Promise.all([
             query(getTrafficStatsQuery),
             query(getTopUserAgentsQuery, [20]),
             query(getMethodBreakdownQuery),
@@ -299,6 +306,11 @@ const getTrafficStats = async (req, res) => {
             query(getAttackSeverityBreakdownQuery),
             query(getTopCvesQuery),
             query(getTopTargetedPathsQuery),
+            query(getAttackTrendQuery),
+            query(getAttacksByCountryQuery),
+            query(getAttackInfraUsageQuery),
+            query(getTopAttackerNetworksQuery),
+            query(getTorAttackerCountQuery),
         ]);
 
         res.json({
@@ -313,6 +325,11 @@ const getTrafficStats = async (req, res) => {
             attackSeverities: severities.rows,
             topCves: cves.rows,
             topTargetedPaths: targetedPaths.rows,
+            attackTrend: trend.rows,
+            attacksByCountry: byCountry.rows,
+            attackInfraUsage: infraUsage.rows,
+            topAttackerNetworks: networks.rows,
+            torAttackers: parseInt(torCount.rows[0]?.tor_ips || 0, 10),
         });
     } catch (error) {
         console.error('Error fetching stats:', error);

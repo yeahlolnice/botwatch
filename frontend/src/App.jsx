@@ -103,6 +103,7 @@ function Footer() {
     <footer className="site-footer">
       <span className="site-footer-copy">© {new Date().getFullYear()} botwatch.xyz</span>
       <span className="site-footer-links">
+        <a href="/methodology" className="site-footer-link">Methodology</a>
         <Link to="/contact" className="site-footer-link">Contact</Link>
         <Link to="/login" className="site-footer-staff">Staff sign in</Link>
       </span>
