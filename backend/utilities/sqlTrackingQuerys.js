@@ -253,6 +253,8 @@ FROM request_tracking
 WHERE timestamp > NOW() - INTERVAL '30 days'
 GROUP BY day
 ORDER BY day ASC
+`;
+
 // --- Attack infrastructure cross-reference (attackers × IP enrichment) ---
 // "Attacking" = tripped a signature/intent, hit a honeypot, scored > 0, or was
 // flagged novel/suspicious. Country comes from the Cloudflare header (present on
