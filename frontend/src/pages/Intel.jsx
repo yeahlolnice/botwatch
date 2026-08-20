@@ -58,14 +58,62 @@ function BarRow({ label, value, max, color = 'var(--accent)' }) {
   )
 }
 
+const SEVERITY_COLOR = {
+  critical: 'var(--red)',
+  high: 'var(--orange)',
+  medium: 'var(--yellow)',
+  low: 'var(--accent)',
+}
+
+function shortDate(ts) {
+  return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+// Daily attack-volume bars (last 30 days). Pure SVG, no chart lib.
+function TrendBars({ data }) {
+  if (!data || data.length < 2) return <div className="intel-empty">Not enough history yet</div>
+  const vals = data.map(d => Number(d.attacks) || 0)
+  const max = Math.max(...vals, 1)
+  const W = 640, H = 130, pad = { l: 6, r: 6, t: 10, b: 18 }
+  const bw = (W - pad.l - pad.r) / data.length
+  return (
+    <>
+      <div style={{ overflowX: 'auto' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W, height: 'auto', display: 'block' }}>
+          {data.map((d, i) => {
+            const v = Number(d.attacks) || 0
+            const h = (v / max) * (H - pad.t - pad.b)
+            const x = pad.l + i * bw
+            return (
+              <rect key={i} x={x + 1} y={H - pad.b - h} width={Math.max(bw - 2, 1)} height={h} fill="var(--red)" opacity="0.85">
+                <title>{`${shortDate(d.day)}: ${fmt(d.attacks)} attacks · ${fmt(d.ips)} IPs · ${fmt(d.trap_hits)} trap hits`}</title>
+              </rect>
+            )
+          })}
+          <line x1={pad.l} y1={H - pad.b} x2={W - pad.r} y2={H - pad.b} stroke="var(--border)" />
+        </svg>
+      </div>
+      <div className="trend-axis">
+        <span>{shortDate(data[0].day)}</span>
+        <span>peak {fmt(max)}/day</span>
+        <span>{shortDate(data[data.length - 1].day)}</span>
+      </div>
+    </>
+  )
+}
+
 export default function Intel() {
   const stats = usePolled('/api/public/stats')
   const intel = usePolled('/api/public/intel')
   const leaderboard = usePolled('/api/public/leaderboard')
+  const charts = usePolled('/api/public/threat-charts', 60000)
 
   const maxAttack = intel?.attacks?.[0]?.occurrences ?? 1
   const maxCountry = intel?.countries?.[0]?.total_requests ?? 1
   const maxHoneypot = intel?.honeypots?.[0]?.hits ?? 1
+  const maxIntent = charts?.attackIntents?.[0]?.occurrences ?? 1
+  const maxSeverity = Math.max(1, ...(charts?.attackSeverities ?? []).map(s => Number(s.occurrences) || 0))
+  const maxUsage = charts?.attackInfraUsage?.[0]?.ips ?? 1
 
   return (
     <main className="intel-page">
@@ -95,6 +143,13 @@ export default function Intel() {
       </div>
 
       <div className="intel-grid intel-grid-col-2">
+
+        {/* Attack volume trend */}
+        <div className="intel-card intel-card-wide">
+          <h2>Attack Volume</h2>
+          <p className="intel-card-sub">Daily attack requests over the last 30 days</p>
+          <TrendBars data={charts?.attackTrend} />
+        </div>
 
         {/* Attack breakdown */}
         <div className="intel-card">
@@ -159,6 +214,120 @@ export default function Intel() {
               ))}
             </div>
           ) : <div className="intel-empty">No country data yet</div>}
+        </div>
+
+        {/* Attacker intent */}
+        <div className="intel-card">
+          <h2>Attacker Intent</h2>
+          <p className="intel-card-sub">What the automated traffic is trying to do</p>
+          {charts?.attackIntents?.length > 0 ? (
+            <div className="bar-list">
+              {charts.attackIntents.map(i => (
+                <BarRow key={i.intent} label={i.intent} value={Number(i.occurrences)} max={maxIntent} color="var(--orange)" />
+              ))}
+            </div>
+          ) : <div className="intel-empty">No classified attacks yet</div>}
+        </div>
+
+        {/* Severity */}
+        <div className="intel-card">
+          <h2>Attack Severity</h2>
+          <p className="intel-card-sub">Distribution by severity of matched signatures</p>
+          {charts?.attackSeverities?.length > 0 ? (
+            <div className="bar-list">
+              {charts.attackSeverities.map(s => (
+                <BarRow key={s.severity} label={s.severity} value={Number(s.occurrences)} max={maxSeverity} color={SEVERITY_COLOR[s.severity] || 'var(--accent)'} />
+              ))}
+            </div>
+          ) : <div className="intel-empty">No severity data yet</div>}
+        </div>
+
+        {/* Known CVE exploit attempts */}
+        <div className="intel-card intel-card-wide">
+          <h2>Known CVE Exploit Attempts</h2>
+          <p className="intel-card-sub">Named vulnerabilities attackers are firing at us</p>
+          {charts?.topCves?.length > 0 ? (
+            <div className="intel-table">
+              <div className="intel-table-head cve-cols"><span>CVE</span><span>Attempts</span><span>Unique IPs</span><span>Last Seen</span></div>
+              {charts.topCves.map(c => (
+                <div key={c.cve} className="intel-table-row cve-cols">
+                  <span className="mono">{c.cve}</span>
+                  <span>{fmt(c.occurrences)}</span>
+                  <span>{fmt(c.unique_ips)}</span>
+                  <span className="dim">{timeAgo(c.last_seen)}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div className="intel-empty">No CVE exploit attempts recorded yet</div>}
+        </div>
+
+        {/* Top targeted paths */}
+        <div className="intel-card intel-card-wide">
+          <h2>Top Targeted Paths</h2>
+          <p className="intel-card-sub">The endpoints attackers probe most</p>
+          {charts?.topTargetedPaths?.length > 0 ? (
+            <div className="intel-table">
+              <div className="intel-table-head path-cols"><span>Path</span><span>Attacks</span><span>Unique IPs</span></div>
+              {charts.topTargetedPaths.map((p, i) => (
+                <div key={`${p.path}-${i}`} className="intel-table-row path-cols">
+                  <span className="mono ellipsis">{p.path}</span>
+                  <span>{fmt(p.attacks)}</span>
+                  <span>{fmt(p.unique_ips)}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div className="intel-empty">No targeted paths yet</div>}
+        </div>
+
+        {/* Top attacking IPs (masked) */}
+        <div className="intel-card intel-card-wide">
+          <h2>Top Attacking IPs</h2>
+          <p className="intel-card-sub">Most active sources — addresses masked for privacy</p>
+          {charts?.topAttackingIPs?.filter(a => Number(a.threat_requests) > 0 || Number(a.honeypot_hits) > 0).length > 0 ? (
+            <div className="intel-table">
+              <div className="intel-table-head ip-cols"><span>IP</span><span>Requests</span><span>Threats</span><span>Traps</span><span>Score</span></div>
+              {charts.topAttackingIPs.filter(a => Number(a.threat_requests) > 0 || Number(a.honeypot_hits) > 0).map((a, i) => (
+                <div key={`${a.ip}-${i}`} className="intel-table-row ip-cols">
+                  <span className="mono">{a.ip}</span>
+                  <span>{fmt(a.total_requests)}</span>
+                  <span className="threats">{fmt(a.threat_requests)}</span>
+                  <span className="traps">{fmt(a.honeypot_hits)}</span>
+                  <span>{a.max_threat_score ?? 0}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div className="intel-empty">No attacking IPs recorded yet</div>}
+        </div>
+
+        {/* Attack infrastructure — usage type */}
+        <div className="intel-card">
+          <h2>Attack Infrastructure</h2>
+          <p className="intel-card-sub">Hosting type of attacker IPs (enriched subset)</p>
+          {charts?.attackInfraUsage?.length > 0 ? (
+            <div className="bar-list">
+              {charts.attackInfraUsage.map(u => (
+                <BarRow key={u.usage_type} label={u.usage_type} value={Number(u.ips)} max={maxUsage} color="var(--accent)" />
+              ))}
+            </div>
+          ) : <div className="intel-empty">No enriched infrastructure data yet</div>}
+        </div>
+
+        {/* Top attacker networks */}
+        <div className="intel-card">
+          <h2>Top Attacker Networks</h2>
+          <p className="intel-card-sub">ISPs / networks of attacker IPs (enriched subset)</p>
+          {charts?.topAttackerNetworks?.length > 0 ? (
+            <div className="intel-table">
+              <div className="intel-table-head net-cols"><span>Network</span><span>IPs</span><span>Country</span></div>
+              {charts.topAttackerNetworks.map((n, i) => (
+                <div key={`${n.isp}-${i}`} className="intel-table-row net-cols">
+                  <span className="ellipsis">{n.isp}{n.has_tor ? ' ⚠' : ''}</span>
+                  <span>{fmt(n.ips)}</span>
+                  <span className="dim">{n.country || '—'}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div className="intel-empty">No enriched network data yet</div>}
         </div>
 
         {/* Bot leaderboard */}
