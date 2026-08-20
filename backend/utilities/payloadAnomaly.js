@@ -26,8 +26,18 @@ function entropy(str) {
     return e;
 }
 
+// Structured, browser-set headers full of separators/encoding that would trip
+// the fuzzy heuristics for ordinary visitors (e.g. a Cookie with many ';' or
+// %-encoded values). The signature engine still scans these for real payloads;
+// only the fuzzy anomaly heuristics skip them, so normal browsing isn't flagged
+// as novel/suspicious.
+const ANOMALY_SKIP_SOURCES = new Set([
+    'header.cookie', 'header.set-cookie', 'header.accept', 'header.accept-language',
+    'header.accept-encoding', 'header.sec-ch-ua', 'header.user-agent',
+]);
+
 export function scoreAnomaly(parts) {
-    const targets = buildTargets(parts);
+    const targets = buildTargets(parts).filter((t) => !ANOMALY_SKIP_SOURCES.has(t.source));
     const reasons = [];
     let score = 0;
     const flag = (id, points, source, value, index) => {
