@@ -8,6 +8,7 @@ import {
     getAiReadiness,
     getSiteProfile,
     getPublicThreatCharts,
+    getPublicBlocklist,
 } from '../controllers/publicController.js';
 import { trafficLimiter } from '../middleware/rateLimiter.js';
 
@@ -21,6 +22,7 @@ router.get('/intel', getPublicIntel);
 router.get('/threat-charts', getPublicThreatCharts);
 router.get('/leaderboard', getPublicLeaderboard);
 router.get('/ai-readiness', getAiReadiness);
+router.get('/blocklist', getPublicBlocklist);
 router.get('/site/:hostname', getSiteProfile);
 router.get('/sitemap.xml', getPublicSitemap);
 

@@ -28,6 +28,7 @@ import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 import { runMigrations } from './utilities/runMigrations.js';
 import { startReportWorker } from './readiness/reportWorker.js';
 import { getCompanyProfile, getCompanySitemap } from './controllers/companyProfileController.js';
+import { getPublicBlocklist } from './controllers/publicController.js';
 import { getMethodology } from './controllers/methodologyController.js';
 
 dotenv.config();
@@ -108,6 +109,8 @@ app.get('/.well-known/security.txt', (req, res) => {
 // crawlers get real HTML, not the JS shell.
 app.get('/company/:hostname', getCompanyProfile);
 app.get('/sitemap-companies.xml', getCompanySitemap);
+// Friendly, hotlinkable alias for the plain-text threat blocklist.
+app.get('/blocklist.txt', (req, res) => { req.query.format = 'txt'; return getPublicBlocklist(req, res); });
 // Server-rendered methodology / authority page (SEO) — real HTML for crawlers.
 app.get('/methodology', getMethodology);
 
