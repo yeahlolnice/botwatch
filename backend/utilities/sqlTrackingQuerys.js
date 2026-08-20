@@ -239,6 +239,59 @@ GROUP BY trap_type
 ORDER BY hits DESC
 `;
 
+// --- Attack infrastructure cross-reference (attackers × IP enrichment) ---
+// "Attacking" = tripped a signature/intent, hit a honeypot, scored > 0, or was
+// flagged novel/suspicious. Country comes from the Cloudflare header (present on
+// every request); ISP/usage-type/Tor come from ip_enrichment (AbuseIPDB), which
+// is populated per-IP on demand, so those rollups cover the enriched subset.
+const ATTACKER_PREDICATE = `(attack_intent IS NOT NULL OR is_trap = TRUE OR bot_score > 0 OR suspicious_unclassified = TRUE)`;
+
+export const getAttacksByCountryQuery = `
+SELECT country,
+       COUNT(DISTINCT ip_address) AS ips,
+       COUNT(*)                   AS requests,
+       COUNT(*) FILTER (WHERE is_trap) AS trap_hits
+FROM request_tracking
+WHERE country IS NOT NULL AND ${ATTACKER_PREDICATE}
+GROUP BY country
+ORDER BY ips DESC, requests DESC
+LIMIT 20
+`;
+
+export const getAttackInfraUsageQuery = `
+SELECT COALESCE(ie.abuse_usage_type, 'Unknown')            AS usage_type,
+       COUNT(DISTINCT COALESCE(rt.cf_connecting_ip, rt.ip_address)) AS ips,
+       COUNT(*)                                            AS requests
+FROM request_tracking rt
+JOIN ip_enrichment ie ON ie.ip = COALESCE(rt.cf_connecting_ip, rt.ip_address)
+WHERE ${ATTACKER_PREDICATE}
+GROUP BY COALESCE(ie.abuse_usage_type, 'Unknown')
+ORDER BY ips DESC
+LIMIT 15
+`;
+
+export const getTopAttackerNetworksQuery = `
+SELECT ie.abuse_isp                                        AS isp,
+       ie.abuse_country_code                               AS country,
+       COUNT(DISTINCT COALESCE(rt.cf_connecting_ip, rt.ip_address)) AS ips,
+       COUNT(*)                                            AS requests,
+       MAX(rt.bot_score)                                   AS max_score,
+       bool_or(ie.abuse_is_tor)                            AS has_tor
+FROM request_tracking rt
+JOIN ip_enrichment ie ON ie.ip = COALESCE(rt.cf_connecting_ip, rt.ip_address)
+WHERE ie.abuse_isp IS NOT NULL AND ${ATTACKER_PREDICATE}
+GROUP BY ie.abuse_isp, ie.abuse_country_code
+ORDER BY ips DESC, requests DESC
+LIMIT 20
+`;
+
+export const getTorAttackerCountQuery = `
+SELECT COUNT(DISTINCT COALESCE(rt.cf_connecting_ip, rt.ip_address)) AS tor_ips
+FROM request_tracking rt
+JOIN ip_enrichment ie ON ie.ip = COALESCE(rt.cf_connecting_ip, rt.ip_address)
+WHERE ie.abuse_is_tor = TRUE AND ${ATTACKER_PREDICATE}
+`;
+
 // --- Reclassify (reprocess stored requests through the upgraded analyzer) ---
 // Pulls the columns the analyzer needs to rebuild its inspection targets from a
 // stored row. Id-keyed pagination (WHERE id > $1) so a batch job can stream the
