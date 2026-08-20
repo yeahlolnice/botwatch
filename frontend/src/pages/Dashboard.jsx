@@ -347,7 +347,6 @@ export default function Dashboard() {
     const [countryFilter, setCountryFilter] = useState('')
     const [page, setPage] = useState(1)
     const [selected, setSelected] = useState(null)
-    const [suspicious, setSuspicious] = useState([])
     const [activeTab, setActiveTab] = useState('traffic')
     const debounceRef = useRef(null)
     const [isAdmin, setIsAdmin] = useState(false)
@@ -428,12 +427,6 @@ export default function Dashboard() {
             setStats(statsData)
         } catch (e) {
             // stats failure is non-fatal
-        }
-        try {
-            const susp = await apiFetch('/api/traffic?suspicious=true&limit=25')
-            setSuspicious(susp.data)
-        } catch (e) {
-            // triage list failure is non-fatal
         }
     }, [])
 
@@ -742,31 +735,6 @@ export default function Dashboard() {
                             </table>
                         </div>
                     )}
-
-                    <div className="breakdown-card full-width">
-                        <h3>Novel / Unclassified — triage queue</h3>
-                        <p className="empty-msg" style={{ marginTop: 0 }}>Attack-shaped requests that matched no known signature. Click to inspect.</p>
-                        {!suspicious.length
-                            ? <p className="empty-msg">Nothing awaiting triage.</p>
-                            : <table className="breakdown-table">
-                                <thead><tr><th>Time</th><th>Method</th><th>Path</th><th>IP</th><th>Anomaly</th></tr></thead>
-                                <tbody>
-                                    {suspicious.map(r => (
-                                        <tr key={r.id} className="clickable" onClick={() => setSelected(r)}>
-                                            <td className="td-time">
-                                                <span className="time-date">{formatDate(r.timestamp)}</span>
-                                                <span className="time-clock">{formatTs(r.timestamp)}</span>
-                                            </td>
-                                            <td><span style={{ color: METHOD_COLORS[r.method] || '#fff', fontWeight: 600 }}>{r.method}</span></td>
-                                            <td className="mono">{r.path}</td>
-                                            <td className="mono">{r.cf_connecting_ip || r.ip_address || '—'}</td>
-                                            <td style={{ fontWeight: 700 }}>{r.anomaly_score ?? '—'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        }
-                    </div>
                 </div>
             )}
 
