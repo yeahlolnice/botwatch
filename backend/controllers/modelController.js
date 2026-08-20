@@ -7,7 +7,7 @@ import {
     getModelQuery,
     upsertIpScoreQuery,
     getTopIpScoresQuery,
-    getFeedQuery,
+    getEnrichedFeedQuery,
     upsertIpVerdictQuery,
     deleteIpVerdictQuery,
 } from '../utilities/sqlModelQuerys.js';
@@ -100,16 +100,26 @@ const csvEscape = (v) => {
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-// GET /api/model/feed?minScore=70&format=json|csv — the scored bad-IP feed.
+const iso = (v) => v?.toISOString?.() || v || '';
+const list = (a) => (Array.isArray(a) ? a.filter(Boolean).join(';') : '');
+
+// GET /api/model/feed?minScore=70&format=json|csv — the scored bad-IP feed,
+// enriched into IOCs (observed activity + AbuseIPDB context per IP).
 export const getFeed = async (req, res) => {
     try {
         const minScore = Math.min(Math.max(parseInt(req.query.minScore, 10) || 70, 0), 100);
         const format = req.query.format === 'csv' ? 'csv' : 'json';
-        const rows = (await query(getFeedQuery, [minScore])).rows;
+        const rows = (await query(getEnrichedFeedQuery, [minScore])).rows;
 
         if (format === 'csv') {
-            const header = 'ip,score,request_count,scored_at,reason';
-            const body = rows.map((r) => [r.ip, r.score, r.request_count, r.scored_at?.toISOString?.() || r.scored_at, r.explanation].map(csvEscape).join(',')).join('\n');
+            const header = 'ip,score,request_count,first_seen,last_seen,honeypot_hits,threat_requests,intents,cves,countries,abuse_confidence,isp,usage_type,is_tor,abuse_country,reason';
+            const body = rows.map((r) => [
+                r.ip, r.score, r.request_count,
+                iso(r.first_seen), iso(r.last_seen), r.honeypot_hits ?? 0, r.threat_requests ?? 0,
+                list(r.intents), list(r.cves), list(r.countries),
+                r.abuse_confidence_score ?? '', r.abuse_isp ?? '', r.abuse_usage_type ?? '',
+                r.abuse_is_tor == null ? '' : r.abuse_is_tor, r.abuse_country_code ?? '', r.explanation,
+            ].map(csvEscape).join(',')).join('\n');
             res.setHeader('Content-Type', 'text/csv');
             res.setHeader('Content-Disposition', 'attachment; filename="botwatch-threat-feed.csv"');
             return res.send(`${header}\n${body}\n`);
@@ -119,7 +129,28 @@ export const getFeed = async (req, res) => {
             generatedAt: new Date().toISOString(),
             minScore,
             count: rows.length,
-            feed: rows.map((r) => ({ ip: r.ip, score: r.score, requestCount: r.request_count, reason: r.explanation, scoredAt: r.scored_at })),
+            feed: rows.map((r) => ({
+                ip: r.ip,
+                score: r.score,
+                requestCount: r.request_count,
+                reason: r.explanation,
+                scoredAt: r.scored_at,
+                firstSeen: r.first_seen,
+                lastSeen: r.last_seen,
+                honeypotHits: r.honeypot_hits ?? 0,
+                threatRequests: r.threat_requests ?? 0,
+                intents: r.intents || [],
+                cves: r.cves || [],
+                countries: r.countries || [],
+                abuse: (r.abuse_confidence_score != null || r.abuse_isp || r.abuse_usage_type) ? {
+                    confidence: r.abuse_confidence_score,
+                    isp: r.abuse_isp,
+                    usageType: r.abuse_usage_type,
+                    isTor: r.abuse_is_tor,
+                    country: r.abuse_country_code,
+                    rdns: r.rdns,
+                } : null,
+            })),
         });
     } catch (error) {
         console.error('Feed error:', error);

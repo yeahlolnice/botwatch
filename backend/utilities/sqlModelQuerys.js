@@ -57,6 +57,43 @@ SELECT ip, score, explanation, request_count, scored_at
 FROM ip_risk_score WHERE ip = $1;
 `;
 
+// Enriched threat feed — each scored IP turned into a proper IOC: model score
+// + observed activity (first/last seen, honeypot + threat request counts, the
+// attack intents and CVEs seen from it, origin countries) + AbuseIPDB
+// enrichment (confidence, ISP, usage type, Tor, rDNS) where we have it.
+export const getEnrichedFeedQuery = `
+WITH agg AS (
+  SELECT host(ip_address) AS ip,
+    MIN(timestamp) AS first_seen,
+    MAX(timestamp) AS last_seen,
+    COUNT(*) FILTER (WHERE is_trap) AS honeypot_hits,
+    COUNT(*) FILTER (WHERE threat_signals IS NOT NULL AND jsonb_array_length(threat_signals) > 0) AS threat_requests,
+    array_agg(DISTINCT attack_intent) FILTER (WHERE attack_intent IS NOT NULL) AS intents,
+    array_agg(DISTINCT country) FILTER (WHERE country IS NOT NULL) AS countries
+  FROM request_tracking
+  WHERE ip_address IS NOT NULL
+  GROUP BY host(ip_address)
+),
+cve_agg AS (
+  SELECT host(ip_address) AS ip, array_agg(DISTINCT cve) AS cves
+  FROM request_tracking, jsonb_array_elements_text(cve_ids) AS cve
+  WHERE cve_ids IS NOT NULL AND jsonb_array_length(cve_ids) > 0
+  GROUP BY host(ip_address)
+)
+SELECT
+  s.ip, s.score, s.request_count, s.explanation, s.scored_at,
+  a.first_seen, a.last_seen, a.honeypot_hits, a.threat_requests, a.intents, a.countries,
+  c.cves,
+  ie.abuse_confidence_score, ie.abuse_isp, ie.abuse_usage_type, ie.abuse_is_tor,
+  ie.abuse_country_code, ie.rdns
+FROM ip_risk_score s
+LEFT JOIN agg a       ON a.ip = s.ip
+LEFT JOIN cve_agg c   ON c.ip = s.ip
+LEFT JOIN ip_enrichment ie ON ie.ip = s.ip::inet
+WHERE s.score >= $1
+ORDER BY s.score DESC, s.request_count DESC NULLS LAST;
+`;
+
 // --- model + score persistence (auto-created by runMigrations) ---
 export const createModelTableQuery = `
 CREATE TABLE IF NOT EXISTS ml_model (
