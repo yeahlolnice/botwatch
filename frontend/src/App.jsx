@@ -15,6 +15,7 @@ import ApiKeys from './pages/ApiKeys'
 import ApiDocs from './pages/ApiDocs'
 import Pricing from './pages/Pricing'
 import Contact from './pages/Contact'
+import Data from './pages/Data'
 import BillingSuccess from './pages/BillingSuccess'
 import Account from './pages/Account'
 import ResetPassword from './pages/ResetPassword'
@@ -74,6 +75,7 @@ function Nav() {
         <Link to="/readiness" className={pathname === '/readiness' ? 'active' : ''}>Readiness</Link>
         <Link to="/search" className={pathname === '/search' ? 'active' : ''}>Search</Link>
         <Link to="/docs" className={pathname === '/docs' ? 'active' : ''}>API</Link>
+        <Link to="/data" className={pathname === '/data' ? 'active' : ''}>Data</Link>
         <Link to="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Pricing</Link>
         <Link to="/contact" className={pathname === '/contact' ? 'active' : ''}>Contact</Link>
         {isResearch && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
@@ -123,6 +125,7 @@ export default function App() {
         <Route path="/docs" element={<ApiDocs />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/data" element={<Data />} />
         <Route path="/billing/success" element={<BillingSuccess />} />
         <Route path="/account" element={<Account />} />
         <Route path="/account/reset" element={<ResetPassword />} />
