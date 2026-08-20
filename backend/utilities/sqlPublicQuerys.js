@@ -90,3 +90,27 @@ WHERE is_trap = TRUE
 GROUP BY trap_type
 ORDER BY hits DESC
 `;
+
+// Public threat blocklist — HIGH-CONFIDENCE malicious IPs only. Publishing an
+// IP is a serious claim, so we deliberately include just unambiguous ground
+// truth: IPs that hit a honeypot decoy (no legitimate reason to) OR an analyst
+// has confirmed malicious. Model-score-only IPs are NOT published (the model
+// has false positives). An analyst 'benign' verdict always excludes an IP, even
+// if it tripped a trap. Aggregate metadata only — never payloads or user data.
+export const getPublicBlocklistQuery = `
+SELECT host(rt.ip_address)                                      AS ip,
+       MIN(rt.timestamp)                                        AS first_seen,
+       MAX(rt.timestamp)                                        AS last_seen,
+       COUNT(*) FILTER (WHERE rt.is_trap)                       AS trap_hits,
+       COALESCE(MAX(rt.bot_score), 0)                           AS max_score,
+       array_agg(DISTINCT rt.country) FILTER (WHERE rt.country IS NOT NULL) AS countries,
+       bool_or(v.verdict = 'malicious')                         AS confirmed
+FROM request_tracking rt
+LEFT JOIN ip_verdict v ON v.ip = host(rt.ip_address)
+WHERE rt.ip_address IS NOT NULL
+GROUP BY host(rt.ip_address)
+HAVING (COUNT(*) FILTER (WHERE rt.is_trap) > 0 OR bool_or(v.verdict = 'malicious'))
+   AND COALESCE(bool_or(v.verdict = 'benign'), FALSE) = FALSE
+ORDER BY last_seen DESC
+LIMIT 10000
+`;

@@ -6,6 +6,7 @@ import {
     getPublicCountryStatsQuery,
     getPublicBotLeaderboardQuery,
     getPublicHoneypotBreakdownQuery,
+    getPublicBlocklistQuery,
 } from '../utilities/sqlPublicQuerys.js';
 import {
     getDomainReadinessCountsQuery,
@@ -58,6 +59,70 @@ export const getPublicIntel = async (req, res) => {
     } catch (error) {
         console.error('Public intel error:', error);
         return res.status(500).json({ error: 'Failed to fetch intel' });
+    }
+};
+
+const csvEscapeList = (v) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const isoDate = (v) => v?.toISOString?.() || v || '';
+
+// GET /api/public/blocklist?format=txt|csv|json (also served at /blocklist.txt).
+// A free, downloadable threat blocklist of high-confidence malicious IPs. Public
+// and cacheable — meant to be hotlinked/consumed. See getPublicBlocklistQuery
+// for the (deliberately conservative) inclusion criteria.
+export const getPublicBlocklist = async (req, res) => {
+    try {
+        const format = ['csv', 'json'].includes(req.query.format) ? req.query.format : 'txt';
+        const rows = (await query(getPublicBlocklistQuery)).rows;
+        const generatedAt = new Date().toISOString();
+        // Cacheable at the edge (Cloudflare) so the query doesn't run per hit.
+        res.set('Cache-Control', 'public, max-age=3600');
+
+        if (format === 'json') {
+            return res.json({
+                generatedAt,
+                count: rows.length,
+                criteria: 'IPs that hit a honeypot decoy or were analyst-confirmed malicious. Aggregate metadata only.',
+                license: 'Free to use with attribution to botwatch.xyz.',
+                blocklist: rows.map((r) => ({
+                    ip: r.ip,
+                    firstSeen: r.first_seen,
+                    lastSeen: r.last_seen,
+                    trapHits: Number(r.trap_hits) || 0,
+                    maxScore: Number(r.max_score) || 0,
+                    countries: r.countries || [],
+                    confirmed: !!r.confirmed,
+                })),
+            });
+        }
+
+        if (format === 'csv') {
+            const header = 'ip,first_seen,last_seen,trap_hits,max_score,countries,analyst_confirmed';
+            const body = rows.map((r) => [
+                r.ip, isoDate(r.first_seen), isoDate(r.last_seen), r.trap_hits ?? 0, r.max_score ?? 0,
+                (r.countries || []).join(';'), r.confirmed ? 'yes' : 'no',
+            ].map(csvEscapeList).join(',')).join('\n');
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename="botwatch-blocklist.csv"');
+            return res.send(`${header}\n${body}\n`);
+        }
+
+        // Plain text — one IP per line, with a commented header. Firewall-friendly.
+        const head = [
+            '# botwatch.xyz threat blocklist',
+            `# generated: ${generatedAt}`,
+            `# entries: ${rows.length}`,
+            '# criteria: honeypot-decoy hits or analyst-confirmed malicious IPs',
+            '# license: free to use with attribution to botwatch.xyz',
+            '#',
+        ].join('\n');
+        res.type('text/plain');
+        return res.send(`${head}\n${rows.map((r) => r.ip).join('\n')}\n`);
+    } catch (error) {
+        console.error('Public blocklist error:', error);
+        return res.status(500).json({ error: 'Failed to build blocklist' });
     }
 };
 
