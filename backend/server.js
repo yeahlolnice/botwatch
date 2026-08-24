@@ -28,6 +28,7 @@ import { globalLimiter, trafficLimiter } from './middleware/rateLimiter.js';
 import { runMigrations } from './utilities/runMigrations.js';
 import { startReportWorker } from './readiness/reportWorker.js';
 import { getCompanyProfile, getCompanySitemap } from './controllers/companyProfileController.js';
+import { getDirectory } from './controllers/directoryController.js';
 import { getPublicBlocklist } from './controllers/publicController.js';
 import { getMethodology } from './controllers/methodologyController.js';
 
@@ -113,6 +114,9 @@ app.get('/sitemap-companies.xml', getCompanySitemap);
 app.get('/blocklist.txt', (req, res) => { req.query.format = 'txt'; return getPublicBlocklist(req, res); });
 // Server-rendered methodology / authority page (SEO) — real HTML for crawlers.
 app.get('/methodology', getMethodology);
+// Server-rendered company directory (SEO hub cross-linking the /company pages).
+app.get('/directory', getDirectory);
+app.get('/directory/:category', getDirectory);
 
 // Serve React build — after honeypots so trap paths are never short-circuited
 if (existsSync(frontendDist)) {

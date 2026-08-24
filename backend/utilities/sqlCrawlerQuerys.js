@@ -384,6 +384,39 @@ ORDER BY ai_readiness_score DESC NULLS LAST
 LIMIT 5000;
 `;
 
+// --- Public company directory (server-rendered SEO index) ---
+// Companies are rolled up to their registrable root domain (one row per company,
+// best-scoring hostname wins), optionally filtered to a category ($1 null = all).
+export const getDirectoryCompaniesQuery = `
+SELECT hostname, category, score, updated_at FROM (
+  SELECT DISTINCT ON (COALESCE(root_domain, hostname))
+         hostname, category, ai_readiness_score AS score, updated_at
+  FROM domains
+  WHERE ai_readiness_score IS NOT NULL
+    AND ($1::text IS NULL OR category = $1)
+  ORDER BY COALESCE(root_domain, hostname), ai_readiness_score DESC NULLS LAST
+) d
+ORDER BY d.score DESC NULLS LAST, d.hostname ASC
+LIMIT $2 OFFSET $3;
+`;
+
+export const getDirectoryCountQuery = `
+SELECT COUNT(*)::int AS total FROM (
+  SELECT DISTINCT COALESCE(root_domain, hostname)
+  FROM domains
+  WHERE ai_readiness_score IS NOT NULL
+    AND ($1::text IS NULL OR category = $1)
+) t;
+`;
+
+export const getDirectoryCategoriesQuery = `
+SELECT category, COUNT(DISTINCT COALESCE(root_domain, hostname))::int AS count
+FROM domains
+WHERE ai_readiness_score IS NOT NULL AND category IS NOT NULL
+GROUP BY category
+ORDER BY count DESC, category ASC;
+`;
+
 export const getPageReadinessCountsQuery = `
 SELECT
   COUNT(*) FILTER (WHERE status = 'crawled')      AS pages_checked,
