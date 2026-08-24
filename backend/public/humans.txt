@@ -1,0 +1,8 @@
+/* TEAM */
+  Site: botwatch.xyz
+  Contact: info@botwatch.xyz
+
+/* SITE */
+  Description: Independent cybersecurity + AI-readiness research — honeypots,
+  a malicious-IP model, and AI-readiness / WebMCP / security profiles of the web.
+  Standards: HTML5, JSON-LD, llms.txt, ai.txt, WebMCP

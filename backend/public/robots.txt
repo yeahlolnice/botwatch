@@ -1,0 +1,44 @@
+# botwatch.xyz — we welcome AI crawlers and answer engines.
+# Full policy: https://botwatch.xyz/ai.txt
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /account
+
+# Explicit AI-crawler policy — botwatch WANTS to be represented in AI answers,
+# so the major training and answer-engine crawlers are explicitly allowed.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://botwatch.xyz/sitemap.xml
+Sitemap: https://botwatch.xyz/sitemap-companies.xml

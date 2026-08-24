@@ -25,6 +25,39 @@
     <meta property="og:description" content="Track every bot, crawler, and AI agent hitting your server." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://botwatch.xyz" />
+
+    <!-- Structured data (JSON-LD) — botwatch dogfooding its own AI-readiness advice -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://botwatch.xyz/#org",
+          "name": "botwatch.xyz",
+          "url": "https://botwatch.xyz",
+          "email": "info@botwatch.xyz",
+          "logo": "https://botwatch.xyz/apple-touch-icon.png",
+          "description": "Independent cybersecurity + AI-readiness research: honeypots, a malicious-IP model, and AI-readiness / WebMCP / security profiles of the web."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://botwatch.xyz/#website",
+          "url": "https://botwatch.xyz",
+          "name": "botwatch.xyz",
+          "publisher": { "@id": "https://botwatch.xyz/#org" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://botwatch.xyz/company/{search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <!-- GTM noscript fallback -->
