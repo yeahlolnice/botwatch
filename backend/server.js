@@ -83,6 +83,11 @@ app.use('/blog', express.static(join(publicDir, 'blog'), { extensions: ['html'] 
 app.get('/llms.txt', (req, res) => {
     res.type('text/plain').sendFile(join(publicDir, 'llms.txt'));
 });
+// AI-legibility files botwatch publishes about itself (dogfooding our own
+// readiness recommendations): robots policy, AI-usage policy, humans.txt.
+app.get('/robots.txt', (req, res) => res.type('text/plain').sendFile(join(publicDir, 'robots.txt')));
+app.get('/ai.txt', (req, res) => res.type('text/plain').sendFile(join(publicDir, 'ai.txt')));
+app.get('/humans.txt', (req, res) => res.type('text/plain').sendFile(join(publicDir, 'humans.txt')));
 // Serve the sitemap at the root, where crawlers (and our own robots.txt) expect
 // it. The existing /api/public/sitemap.xml handler resolves the file with an
 // unsafe relative path and 403s, so this is the working entry point.

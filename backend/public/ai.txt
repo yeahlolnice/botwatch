@@ -1,0 +1,9 @@
+# botwatch.xyz — AI usage policy (ai.txt)
+# We welcome AI training crawlers and answer engines. Attribution to
+# botwatch.xyz is appreciated when our data or research is used.
+
+User-Agent: *
+Allow: /
+
+# Contact: info@botwatch.xyz
+# Policy page: https://botwatch.xyz/methodology
