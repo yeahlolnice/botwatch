@@ -16,6 +16,9 @@ const SITE = 'https://botwatch.xyz';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
+// URL-safe category slug — must match directoryController.js so the breadcrumb
+// links to the right /directory/:category page.
+const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 // Merge every page's WebMCP result for a domain into one site-wide view.
 function aggregateWebmcp(rows) {
@@ -273,6 +276,11 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
   .nav a{color:var(--dim);text-decoration:none;margin-left:16px}
   main{max-width:820px;margin:0 auto;padding:10px 24px 70px}
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+  .crumb{font-size:12.5px;color:var(--dim);margin-bottom:14px}
+  .crumb a{color:var(--teal);text-decoration:none}
+  .crumb a:hover{text-decoration:underline}
+  .crumb span{margin:0 2px}
+  .crumb .crumb-cur{color:var(--dim);font-family:var(--mono)}
   h1{font-size:30px;letter-spacing:-.5px;margin:8px 0 20px;font-weight:800}
   .summary{display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid var(--border);border-radius:14px;padding:18px 22px;background:var(--surface);margin-bottom:26px}
   .host{font-family:var(--mono);font-size:20px;font-weight:700}
@@ -345,6 +353,7 @@ ${found ? '' : '<meta name="robots" content="noindex">'}
     <div><a href="/readiness-check">Check a site</a><a href="/readiness">AI Readiness</a></div>
   </div>
   <main>
+    ${found ? `<nav class="crumb"><a href="/directory">Directory</a> <span>›</span> ${category ? `<a href="/directory/${slugify(category)}">${esc(category)}</a> <span>›</span> ` : ''}<span class="crumb-cur">${esc(hostname)}</span></nav>` : ''}
     <div class="eyebrow">AI-Readiness Profile</div>
     <h1>Is ${esc(hostname)} ready for AI agents?</h1>
     ${body}
