@@ -13,6 +13,12 @@ import { buildReadinessTrend } from '../crawler/readinessTrend.js';
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const SITE = 'https://botwatch.xyz';
 
+// How long a persisted profile is served before the next visit triggers a fresh
+// scan. The re-scan is lazy — it only happens when someone loads the page — and
+// persisting resets updated_at, so a domain is held for this long between scans.
+const RESCAN_AFTER_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const isStale = (d) => !!(d && d.updated_at) && (Date.now() - new Date(d.updated_at).getTime() > RESCAN_AFTER_MS);
+
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
@@ -376,10 +382,14 @@ export const getCompanyProfile = async (req, res) => {
         let domain = await getDomainByHostname(hostname);
         let scored = domain && domain.ai_readiness_score !== null && domain.ai_readiness_score !== undefined;
 
-        // Read-through cache: if we've never profiled this domain, scan it live,
-        // persist to the canonical store, and render the fresh result. Every hit
-        // after that is a plain DB read.
-        if (!scored) {
+        // Read-through cache with a 30-day staleness window: scan live when we've
+        // never profiled this domain, or when the stored profile is older than
+        // RESCAN_AFTER_MS. The scan is lazy — triggered by this visit, nothing
+        // re-scans on its own — and persisting resets updated_at, so the fresh
+        // result is then served straight from the DB for the next 30 days. If a
+        // stale re-scan can't run (e.g. crawler busy), we fall back to the
+        // still-cached view below.
+        if (!scored || isStale(domain)) {
             try {
                 domain = (await scanAndPersistDomain(hostname)) || domain;
                 scored = domain && domain.ai_readiness_score !== null && domain.ai_readiness_score !== undefined;
