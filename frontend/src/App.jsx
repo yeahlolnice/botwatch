@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import Landing from './pages/Landing'
+import SecurityHome from './pages/SecurityHome'
 import Dashboard from './pages/Dashboard'
 import Intel from './pages/Intel'
 import Readiness from './pages/Readiness'
@@ -55,7 +56,6 @@ function Nav() {
   const authed = !!user
   const isAdmin = user?.role === 'admin'
   const isCustomer = user?.role === 'customer'
-  const isResearch = authed && !isCustomer
 
   if (pathname === '/login') return null
   return (
@@ -71,15 +71,14 @@ function Nav() {
       </button>
       <div className={`nav-links ${menuOpen ? 'nav-links--open' : ''}`}>
         <Link to="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
-        <Link to="/intel" className={pathname === '/intel' ? 'active' : ''}>Intel</Link>
         <Link to="/readiness" className={pathname === '/readiness' ? 'active' : ''}>Readiness</Link>
         <Link to="/search" className={pathname === '/search' ? 'active' : ''}>Search</Link>
         <Link to="/docs" className={pathname === '/docs' ? 'active' : ''}>API</Link>
-        <Link to="/data" className={pathname === '/data' ? 'active' : ''}>Data</Link>
         <Link to="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Pricing</Link>
+        <Link to="/security" className={['/security', '/intel', '/data'].includes(pathname) ? 'active' : ''}>Security</Link>
         <Link to="/contact" className={pathname === '/contact' ? 'active' : ''}>Contact</Link>
-        {isResearch && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
-        {isResearch && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
+        {isAdmin && <Link to="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>Dashboard</Link>}
+        {isAdmin && <Link to="/report" className={pathname === '/report' ? 'active' : ''}>Report</Link>}
         {isAdmin && <Link to="/admin/crawler" className={pathname === '/admin/crawler' ? 'active' : ''}>Crawler</Link>}
         {isAdmin && <Link to="/admin/model" className={pathname === '/admin/model' ? 'active' : ''}>Model</Link>}
         {isAdmin && <Link to="/admin/keys" className={pathname === '/admin/keys' ? 'active' : ''}>API Keys</Link>}
@@ -118,6 +117,7 @@ export default function App() {
       <Nav />
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/security" element={<SecurityHome />} />
         <Route path="/intel" element={<Intel />} />
         <Route path="/readiness" element={<Readiness />} />
         <Route path="/readiness-check" element={<ReadinessCheck />} />
@@ -135,7 +135,7 @@ export default function App() {
         <Route
           path="/report"
           element={
-            <ProtectedRoute roles={['admin', 'user', 'guest']}>
+            <ProtectedRoute roles={['admin']}>
               <Report />
             </ProtectedRoute>
           }
@@ -145,7 +145,7 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute roles={['admin', 'user', 'guest']}>
+            <ProtectedRoute roles={['admin']}>
               <Dashboard />
             </ProtectedRoute>
           }

@@ -344,3 +344,54 @@
   color: var(--text);
   font-weight: 600;
 }
+
+/* --- AI-readiness homepage: hero check form --- */
+.rd-form {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 520px;
+  margin: 4px auto 0;
+  flex-wrap: wrap;
+}
+.rd-input {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 12px 16px;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 8px;
+}
+.rd-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.rd-form .btn-primary { white-space: nowrap; }
+
+/* --- Security research teaser at the foot of the homepage --- */
+.security-teaser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  max-width: 960px;
+  margin: 8px auto 56px;
+  padding: 28px 32px;
+  background: var(--surface2);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 14px;
+}
+.security-teaser-body { flex: 1 1 320px; }
+.security-teaser-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.security-teaser h2 { margin: 0 0 8px; font-size: 1.35rem; color: var(--text); }
+.security-teaser p { margin: 0; color: var(--text-dim); max-width: 60ch; }

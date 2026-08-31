@@ -1,66 +1,35 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import './Landing.css'
 
+// The platform's main homepage and commercial front door: the AI-readiness
+// product. The security research side (honeypots, threat intel) is a free
+// side-project with its own landing at /security, teased at the bottom here.
+
 const features = [
   {
-    icon: '🪤',
-    title: 'Honeypot Endpoints',
-    desc: 'Fake .env files, WordPress login pages, phpinfo, actuator endpoints, SSH keys, and more — served to anyone probing for vulnerabilities. Every hit is logged and attributed.',
+    icon: '📄',
+    title: 'Content agents can read',
+    desc: 'llms.txt, ai.txt, robots policy and structured (JSON-LD) data — the signals that decide whether an AI answer can understand, quote, and cite your site.',
   },
   {
-    icon: '🔬',
-    title: 'Payload Analysis',
-    desc: 'Every request body, query string, and header is scanned for SQLi, XSS, path traversal, command injection, SSRF, Log4Shell, XXE, and deserialization attempts in real time.',
+    icon: '🛠️',
+    title: 'Tools agents can call',
+    desc: 'WebMCP lets your site expose structured tools an AI agent can actually invoke, instead of guessing at your UI. We detect what you expose and score it.',
   },
   {
-    icon: '🌐',
-    title: 'Threat Actor Profiling',
-    desc: 'IPs, User-Agents, and attack patterns are correlated across sessions to identify campaigns, tooling, and the infrastructure behind automated scanning operations.',
-  },
-  {
-    icon: '📡',
-    title: 'Full Request Fidelity',
-    desc: 'Headers, cookies, bodies, and timing are stored unredacted. The raw data is the research value — nothing is sanitised before it hits the database.',
+    icon: '📊',
+    title: 'Benchmarked over time',
+    desc: 'Every domain gets an independent, tracked readiness score with a full profile — see where you stand against your cohort and whether you are improving.',
   },
 ]
-
-const TRAP_LABELS = {
-  'env-file': '.env probe',
-  'env-local': '.env.local probe',
-  'git-config': '.git/config probe',
-  'git-head': '.git/HEAD probe',
-  'wp-login': 'WordPress login probe',
-  'wp-admin': 'WordPress admin probe',
-  'wp-config': 'WordPress config probe',
-  'phpinfo': 'phpinfo() probe',
-  'actuator-health': 'Spring Boot actuator probe',
-  'actuator-env': 'Spring Boot env dump probe',
-  'admin-panel': 'Admin panel probe',
-  'admin-login-attempt': 'Admin login attempt',
-  'sql-backup': 'SQL backup download',
-  'aws-credentials': 'AWS credential probe',
-  'htpasswd': '.htpasswd probe',
-  'ssh-private-key': 'SSH key probe',
-  'robots-recon': 'robots.txt recon',
-  'server-status': 'Server status probe',
-  'k8s-secrets': 'Kubernetes secrets probe',
-}
 
 function fmt(n) {
   if (!n) return '0'
   return Number(n).toLocaleString()
 }
 
-function timeAgo(ts) {
-  const diff = Math.floor((Date.now() - new Date(ts)) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
-}
-
-function usePublicData(endpoint, interval = 30000) {
+function usePublicData(endpoint, interval = 60000) {
   const [data, setData] = useState(null)
   useEffect(() => {
     const load = () =>
@@ -76,81 +45,73 @@ function usePublicData(endpoint, interval = 30000) {
 }
 
 export default function Landing() {
-  const stats = usePublicData('/api/public/stats')
-  const recent = usePublicData('/api/public/recent')
+  const navigate = useNavigate()
+  const readiness = usePublicData('/api/public/ai-readiness')
+  const [url, setUrl] = useState('')
+
+  // Hand off to the existing check page, which prefills and auto-scans from the
+  // ?url= param — no need to duplicate the scan flow here.
+  const check = (e) => {
+    e.preventDefault()
+    const u = url.trim()
+    if (u) navigate(`/readiness-check?url=${encodeURIComponent(u)}`)
+  }
 
   return (
     <main className="landing">
       <section className="hero-section">
-        <div className="hero-badge">Cybersecurity Research · Open Data Collection</div>
+        <div className="hero-badge">AI Readiness · Get seen and cited by AI</div>
         <h1 className="hero-title">
-          The Global AI Readiness Index
+          Is your site ready to be seen and cited by AI?
         </h1>
         <p className="hero-desc">
-          botwatch.xyz is an open research project studying AI readiness, automated crawlers, 
-          and malicious bots. We analyze how inbound requests interact with web infrastructure in the wild, 
-          tracking llms.txt compliance, LLM citation metrics, and automated threats to understand what autonomous agents are looking for.
+          AI agents are starting to read and act on the web. botwatch scores how ready your
+          site is on both fronts — the content agents can understand and the tools they can
+          call — and shows you exactly what to fix. Free instant check.
         </p>
+        <form className="rd-form" onSubmit={check}>
+          <input
+            className="rd-input"
+            type="text"
+            placeholder="yourwebsite.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            aria-label="Your website"
+            required
+          />
+          <button className="btn-primary" type="submit">Check my site →</button>
+        </form>
         <div className="hero-actions">
-          <Link to="/intel" className="btn-primary">Live Intel →</Link>
-          <a href="#research" className="btn-ghost">About the project</a>
+          <Link to="/readiness" className="btn-ghost">See the live readiness index</Link>
         </div>
       </section>
 
-      {/* Live stats bar */}
+      {/* Live credibility bar from the crawled corpus */}
       <section className="stats-bar">
         <div className="stat-item">
-          <span className="stat-value">{stats ? fmt(stats.total_requests) : '—'}</span>
-          <span className="stat-label">Total Requests</span>
+          <span className="stat-value">{readiness ? fmt(readiness.domainsChecked) : '—'}</span>
+          <span className="stat-label">Domains Scored</span>
         </div>
         <div className="stat-divider" />
         <div className="stat-item">
-          <span className="stat-value">{stats ? fmt(stats.unique_ips) : '—'}</span>
-          <span className="stat-label">Unique IPs</span>
+          <span className="stat-value">{readiness ? fmt(readiness.pagesChecked) : '—'}</span>
+          <span className="stat-label">Pages Analysed</span>
         </div>
         <div className="stat-divider" />
         <div className="stat-item">
-          <span className="stat-value">{stats ? fmt(stats.countries_seen) : '—'}</span>
-          <span className="stat-label">Countries</span>
+          <span className="stat-value">{readiness != null ? `${readiness.pctWithLlmsTxt}%` : '—'}</span>
+          <span className="stat-label">Have llms.txt</span>
         </div>
         <div className="stat-divider" />
         <div className="stat-item">
-          <span className="stat-value">{stats ? fmt(stats.honeypot_hits) : '—'}</span>
-          <span className="stat-label">Trap Hits</span>
-        </div>
-        <div className="stat-divider" />
-        <div className="stat-item">
-          <span className="stat-value">{stats ? fmt(stats.requests_last_24h) : '—'}</span>
-          <span className="stat-label">Last 24h</span>
+          <span className="stat-value">{readiness != null ? `${readiness.pctWithJsonLd}%` : '—'}</span>
+          <span className="stat-label">Have JSON-LD</span>
         </div>
       </section>
 
-      {/* Recent trap hits feed */}
-      <section className="feed-section">
-        <div className="feed-header">
-          <h2 className="section-title">Live trap hits</h2>
-          <span className="feed-pulse"><span className="pulse-dot" />Live</span>
-        </div>
-        <p className="section-sub">Real requests hitting honeypot endpoints right now. IPs are partially masked.</p>
-        <div className="feed">
-          {recent && recent.length > 0 ? recent.slice(0, 12).map((r, i) => (
-            <div key={i} className="feed-row">
-              <span className="feed-time">{timeAgo(r.timestamp)}</span>
-              <span className="feed-trap">{TRAP_LABELS[r.trap_type] || r.trap_type}</span>
-              <span className="feed-ip">{r.masked_ip}</span>
-              <span className="feed-country">{r.country || '—'}</span>
-              {r.bot_label && <span className="feed-bot">{r.bot_label}</span>}
-            </div>
-          )) : (
-            <div className="feed-empty">Waiting for trap hits…</div>
-          )}
-        </div>
-        <Link to="/intel" className="feed-more">View full intel →</Link>
-      </section>
-
-      <section className="features-section" id="research">
-        <h2 className="section-title">What we're studying</h2>
-        <p className="section-sub">Every request to this server is a data point. This is what we collect and why.</p>
+      <section className="features-section" id="what">
+        <h2 className="section-title">What we score</h2>
+        <p className="section-sub">Two things decide whether an AI agent can use your site — and most sites only think about one.</p>
         <div className="features-grid">
           {features.map(f => (
             <div key={f.title} className="feature-card">
@@ -163,39 +124,44 @@ export default function Landing() {
       </section>
 
       <section className="how-section" id="how-it-works">
-        <h2 className="section-title">How the data is collected</h2>
+        <h2 className="section-title">How it works</h2>
         <div className="steps">
           <div className="step">
             <span className="step-num">1</span>
             <div>
-              <h3>Every request is captured</h3>
-              <p>Express middleware intercepts all traffic — including probes for known vulnerabilities, path enumeration attempts, and requests to honeypot endpoints designed to attract automated scanners.</p>
+              <h3>Run a free instant check</h3>
+              <p>Enter your domain and get an immediate readiness score across AI-legibility signals and agent-actionable tools — no signup required.</p>
             </div>
           </div>
           <div className="step">
             <span className="step-num">2</span>
             <div>
-              <h3>Payloads are analysed for attack signatures</h3>
-              <p>Request bodies, query strings, and headers are scanned against 60+ signatures covering common attack categories. Matches are stored with the exact excerpt that triggered the detection.</p>
+              <h3>See exactly what to fix</h3>
+              <p>Your profile breaks the score down signal by signal — llms.txt, structured data, crawler policy, WebMCP — with the specific gaps holding you back.</p>
             </div>
           </div>
           <div className="step">
             <span className="step-num">3</span>
             <div>
-              <h3>Patterns are correlated over time</h3>
-              <p>IP addresses, tooling fingerprints, and payload patterns are linked across sessions. The goal is to identify coordinated campaigns, understand attacker tooling, and potentially surface 0-day exploit attempts being used in the wild.</p>
+              <h3>Get the full report</h3>
+              <p>Go deeper with a detailed, benchmarked report and track your readiness over time as you improve. <Link to="/pricing">See plans →</Link></p>
             </div>
           </div>
         </div>
       </section>
 
-      <footer className="landing-footer">
-        <span>botwatch<span style={{ color: 'var(--accent)' }}>.xyz</span></span>
-        <a href="https://www.abuseipdb.com/user/324210" target="_blank" rel="noopener noreferrer"  title="AbuseIPDB is an IP address blacklist for webmasters and sysadmins to report IP addresses engaging in abusive behavior on their networks">
-          <img src="https://www.abuseipdb.com/contributor/324210.svg" alt="AbuseIPDB Contributor Badge" style={{ width: 200, background: '#35c246', linearGradient:'(rgba(255,255,255,0), rgba(255,255,255,.3) 50%, rgba(0,0,0,.2) 51%, rgba(0,0,0,0))', padding: '5px' }} />
-        </a>
-        <span style={{ color: 'var(--text-dim)' }}>Cybersecurity research. All data collected passively.</span>
-      </footer>
+      {/* Compact teaser for the security research side-project */}
+      <section className="security-teaser">
+        <div className="security-teaser-body">
+          <span className="security-teaser-eyebrow">Also from botwatch</span>
+          <h2>We track the bad bots of the web</h2>
+          <p>
+            Our security research side-project runs a network of honeypots studying how malicious
+            bots and automated crawlers probe the web. It's free, open, and genuinely fascinating.
+          </p>
+        </div>
+        <Link to="/security" className="btn-ghost">Explore the threat intel →</Link>
+      </section>
     </main>
   )
 }
