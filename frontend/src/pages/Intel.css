@@ -339,3 +339,10 @@
 .intel-table .threats { color: var(--orange); }
 .intel-table .traps { color: var(--accent); }
 .intel-table .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Credential attacks section --- */
+.intel-creds { margin: 8px 0 4px; }
+.intel-creds-head { margin-bottom: 14px; }
+.intel-creds-head h2 { margin: 0 0 4px; }
+.intel-creds-stats { margin-bottom: 16px; }
+.cred-cols { grid-template-columns: 1.4fr 1.4fr 0.8fr 0.8fr; }
