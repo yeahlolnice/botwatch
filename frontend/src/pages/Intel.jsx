@@ -107,6 +107,7 @@ export default function Intel() {
   const intel = usePolled('/api/public/intel')
   const leaderboard = usePolled('/api/public/leaderboard')
   const charts = usePolled('/api/public/threat-charts', 60000)
+  const creds = usePolled('/api/public/credential-attacks', 60000)
 
   const maxAttack = intel?.attacks?.[0]?.occurrences ?? 1
   const maxCountry = intel?.countries?.[0]?.total_requests ?? 1
@@ -141,6 +142,90 @@ export default function Intel() {
           </div>
         ))}
       </div>
+
+      {/* Credential attacks — what usernames/passwords attackers try against
+          the honeypot login traps. One of the most compelling data sets we hold. */}
+      <section className="intel-creds">
+        <div className="intel-creds-head">
+          <h2>Credentials attackers are trying</h2>
+          <p className="intel-card-sub">
+            Every username and password submitted to our fake WordPress and admin login traps.
+            These are live attacker dictionaries — the passwords the internet is guessing right now.
+            Repeat-value gated so nothing personal surfaces.
+          </p>
+        </div>
+
+        <div className="intel-stats intel-creds-stats">
+          {[
+            { label: 'Password Attempts', value: creds?.stats?.password_attempts },
+            { label: 'Unique Usernames', value: creds?.stats?.unique_usernames },
+            { label: 'Unique Passwords', value: creds?.stats?.unique_passwords },
+            { label: 'Attacker IPs', value: creds?.stats?.attacker_ips },
+          ].map(s => (
+            <div key={s.label} className="intel-stat">
+              <span className="intel-stat-value">{fmt(s.value)}</span>
+              <span className="intel-stat-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="intel-grid intel-grid-col-2">
+          {/* Top usernames */}
+          <div className="intel-card">
+            <h2>Top Usernames Tried</h2>
+            <p className="intel-card-sub">The account names attackers guess most</p>
+            {creds?.topUsernames?.length > 0 ? (
+              <div className="intel-table">
+                <div className="intel-table-head path-cols"><span>Username</span><span>Attempts</span><span>Unique IPs</span></div>
+                {creds.topUsernames.map((u, i) => (
+                  <div key={`${u.username}-${i}`} className="intel-table-row path-cols">
+                    <span className="mono ellipsis">{u.username}</span>
+                    <span>{fmt(u.attempts)}</span>
+                    <span>{fmt(u.unique_ips)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="intel-empty">No login attempts recorded yet</div>}
+          </div>
+
+          {/* Top passwords */}
+          <div className="intel-card">
+            <h2>Top Passwords Tried</h2>
+            <p className="intel-card-sub">The most-guessed passwords (seen 2+ times)</p>
+            {creds?.topPasswords?.length > 0 ? (
+              <div className="intel-table">
+                <div className="intel-table-head path-cols"><span>Password</span><span>Attempts</span><span>Unique IPs</span></div>
+                {creds.topPasswords.map((p, i) => (
+                  <div key={`${p.password}-${i}`} className="intel-table-row path-cols">
+                    <span className="mono ellipsis">{p.password}</span>
+                    <span>{fmt(p.attempts)}</span>
+                    <span>{fmt(p.unique_ips)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="intel-empty">No repeated passwords recorded yet</div>}
+          </div>
+
+          {/* Top credential pairs */}
+          <div className="intel-card intel-card-wide">
+            <h2>Top Credential Combos</h2>
+            <p className="intel-card-sub">The exact username + password pairs from credential-stuffing lists (seen 2+ times)</p>
+            {creds?.topPairs?.length > 0 ? (
+              <div className="intel-table">
+                <div className="intel-table-head cred-cols"><span>Username</span><span>Password</span><span>Attempts</span><span>Unique IPs</span></div>
+                {creds.topPairs.map((p, i) => (
+                  <div key={`${p.username}:${p.password}-${i}`} className="intel-table-row cred-cols">
+                    <span className="mono ellipsis">{p.username}</span>
+                    <span className="mono ellipsis">{p.password}</span>
+                    <span>{fmt(p.attempts)}</span>
+                    <span>{fmt(p.unique_ips)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="intel-empty">No repeated credential pairs recorded yet</div>}
+          </div>
+        </div>
+      </section>
 
       <div className="intel-grid intel-grid-col-2">
 

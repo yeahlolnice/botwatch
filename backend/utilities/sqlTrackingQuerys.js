@@ -348,3 +348,72 @@ GROUP BY ip_address
 ORDER BY threat_requests DESC, honeypot_hits DESC
 LIMIT $1
 `;
+
+// --- Credential-attack analytics (honeypot login attempts) ------------------
+// Attackers submit usernames/passwords to the fake login traps (WordPress
+// `log`/`pwd`, admin panel `username`/`password`). Those posts are tracked like
+// any other request, so the submitted credentials land in the body JSONB. These
+// are attacker-supplied dictionary/stuffing values — not botwatch user data
+// (real signup credentials are stripped before storage in trackingControllers).
+//
+// PRIVACY: a honeypot can occasionally catch a real credential (someone
+// fat-fingers a genuine password into a fake form). The password and pair
+// queries therefore only surface values seen 2+ times (HAVING COUNT(*) >= 2),
+// so a one-off (possibly real) secret never appears; dictionary values, which
+// recur across attempts, do. Values are also length-capped defensively.
+// Usernames are not gated — attempted account names (admin, root, …) aren't
+// secrets. Keep the >= 2 gate on any PUBLIC surface.
+
+const CRED_USER = `COALESCE(body->>'log', body->>'username', body->>'user')`;
+const CRED_PASS = `COALESCE(body->>'pwd', body->>'password', body->>'pass')`;
+
+export const getTopAttemptedUsernamesQuery = `
+SELECT LEFT(${CRED_USER}, 64)     AS username,
+       COUNT(*)                   AS attempts,
+       COUNT(DISTINCT ip_address) AS unique_ips,
+       MAX(timestamp)             AS last_seen
+FROM request_tracking
+WHERE jsonb_typeof(body) = 'object'
+  AND ${CRED_USER} IS NOT NULL AND ${CRED_USER} <> ''
+GROUP BY 1
+ORDER BY attempts DESC
+LIMIT 15
+`;
+
+export const getTopAttemptedPasswordsQuery = `
+SELECT LEFT(${CRED_PASS}, 64)     AS password,
+       COUNT(*)                   AS attempts,
+       COUNT(DISTINCT ip_address) AS unique_ips
+FROM request_tracking
+WHERE jsonb_typeof(body) = 'object'
+  AND ${CRED_PASS} IS NOT NULL AND ${CRED_PASS} <> ''
+GROUP BY 1
+HAVING COUNT(*) >= 2
+ORDER BY attempts DESC
+LIMIT 15
+`;
+
+export const getTopCredentialPairsQuery = `
+SELECT LEFT(${CRED_USER}, 64) AS username,
+       LEFT(${CRED_PASS}, 64) AS password,
+       COUNT(*)               AS attempts,
+       COUNT(DISTINCT ip_address) AS unique_ips
+FROM request_tracking
+WHERE jsonb_typeof(body) = 'object'
+  AND ${CRED_USER} IS NOT NULL AND ${CRED_USER} <> ''
+  AND ${CRED_PASS} IS NOT NULL AND ${CRED_PASS} <> ''
+GROUP BY 1, 2
+HAVING COUNT(*) >= 2
+ORDER BY attempts DESC
+LIMIT 15
+`;
+
+export const getCredentialAttemptStatsQuery = `
+SELECT COUNT(*) FILTER (WHERE ${CRED_PASS} IS NOT NULL AND ${CRED_PASS} <> '')       AS password_attempts,
+       COUNT(DISTINCT ${CRED_USER}) FILTER (WHERE ${CRED_USER} <> '')                AS unique_usernames,
+       COUNT(DISTINCT ${CRED_PASS}) FILTER (WHERE ${CRED_PASS} <> '')                AS unique_passwords,
+       COUNT(DISTINCT ip_address) FILTER (WHERE ${CRED_USER} IS NOT NULL OR ${CRED_PASS} IS NOT NULL) AS attacker_ips
+FROM request_tracking
+WHERE jsonb_typeof(body) = 'object'
+  AND (${CRED_USER} IS NOT NULL OR ${CRED_PASS} IS NOT NULL)
+`;

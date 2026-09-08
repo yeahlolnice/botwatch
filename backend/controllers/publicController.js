@@ -32,6 +32,10 @@ import {
     getAttackInfraUsageQuery,
     getTopAttackerNetworksQuery,
     getHoneypotHitsQuery,
+    getTopAttemptedUsernamesQuery,
+    getTopAttemptedPasswordsQuery,
+    getTopCredentialPairsQuery,
+    getCredentialAttemptStatsQuery,
 } from '../utilities/sqlTrackingQuerys.js';
 
 const HOSTNAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
@@ -118,6 +122,32 @@ export const getPublicThreatCharts = async (req, res) => {
     } catch (error) {
         console.error('Public threat charts error:', error);
         return res.status(500).json({ error: 'Failed to fetch threat charts' });
+    }
+};
+
+// GET /api/public/credential-attacks — what usernames/passwords attackers throw
+// at the honeypot login traps. Attacker-supplied dictionary values, not user
+// data; passwords/pairs are frequency-gated in SQL (>= 2 occurrences) so a
+// one-off possibly-real secret never surfaces on this public endpoint.
+export const getPublicCredentialAttacks = async (req, res) => {
+    try {
+        const [stats, usernames, passwords, pairs] = await Promise.all([
+            query(getCredentialAttemptStatsQuery),
+            query(getTopAttemptedUsernamesQuery),
+            query(getTopAttemptedPasswordsQuery),
+            query(getTopCredentialPairsQuery),
+        ]);
+
+        res.set('Cache-Control', 'public, max-age=60');
+        return res.json({
+            stats: stats.rows[0] || {},
+            topUsernames: usernames.rows,
+            topPasswords: passwords.rows,
+            topPairs: pairs.rows,
+        });
+    } catch (error) {
+        console.error('Public credential attacks error:', error);
+        return res.status(500).json({ error: 'Failed to fetch credential attacks' });
     }
 };
 
