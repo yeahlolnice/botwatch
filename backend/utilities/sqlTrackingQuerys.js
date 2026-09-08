@@ -417,3 +417,68 @@ FROM request_tracking
 WHERE jsonb_typeof(body) = 'object'
   AND (${CRED_USER} IS NOT NULL OR ${CRED_PASS} IS NOT NULL)
 `;
+
+// --- Honeytoken replays (scrape -> harvest -> replay attack chain) ----------
+// $1 is the array of planted canary values (honeytokens.js). A login attempt
+// whose submitted username/password equals one of these proves the attacker
+// harvested it from a fake config file first — we never publish these values,
+// so they can't be guessed. We also correlate each replay back to whether the
+// SAME IP earlier scraped a config-file trap ($2 = those trap types), which
+// separates same-host reuse from cross-actor credential sharing.
+
+export const getCanaryReplayStatsQuery = `
+WITH matched AS (
+    SELECT ip_address, timestamp,
+           ${CRED_USER} AS un, ${CRED_PASS} AS pw
+    FROM request_tracking
+    WHERE jsonb_typeof(body) = 'object'
+      AND (${CRED_USER} = ANY($1) OR ${CRED_PASS} = ANY($1))
+),
+scrapers AS (
+    SELECT DISTINCT ip_address
+    FROM request_tracking
+    WHERE trap_type = ANY($2)
+)
+SELECT COUNT(*)                                   AS total_replays,
+       COUNT(DISTINCT m.ip_address)               AS attacker_ips,
+       COUNT(DISTINCT COALESCE(m.pw, m.un))       AS tokens_tripped,
+       COUNT(*) FILTER (WHERE s.ip_address IS NOT NULL) AS same_host_chains
+FROM matched m
+LEFT JOIN scrapers s ON s.ip_address = m.ip_address
+`;
+
+// Recent tripwire events for the showcase feed. Each row is one replay of a
+// planted credential, with the harvesting correlation and time-to-weaponize.
+export const getCanaryReplayEventsQuery = `
+WITH matched AS (
+    SELECT ip_address, country, timestamp AS replayed_at, trap_type,
+           COALESCE(
+               (SELECT v FROM unnest($1::text[]) AS v WHERE v = ${CRED_PASS}),
+               (SELECT v FROM unnest($1::text[]) AS v WHERE v = ${CRED_USER})
+           ) AS token
+    FROM request_tracking
+    WHERE jsonb_typeof(body) = 'object'
+      AND (${CRED_USER} = ANY($1) OR ${CRED_PASS} = ANY($1))
+),
+scrapes AS (
+    SELECT ip_address, MIN(timestamp) AS first_scrape
+    FROM request_tracking
+    WHERE trap_type = ANY($2)
+    GROUP BY ip_address
+)
+SELECT m.token,
+       m.ip_address,
+       m.country,
+       m.replayed_at,
+       m.trap_type AS replayed_via,
+       (s.ip_address IS NOT NULL)                                    AS same_ip_scraped,
+       s.first_scrape,
+       CASE WHEN s.first_scrape IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (m.replayed_at - s.first_scrape)) / 3600.0
+       END                                                           AS hours_to_weaponize
+FROM matched m
+LEFT JOIN scrapes s ON s.ip_address = m.ip_address
+WHERE m.token IS NOT NULL
+ORDER BY m.replayed_at DESC
+LIMIT 20
+`;

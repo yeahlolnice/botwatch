@@ -16,6 +16,14 @@ function timeAgo(ts) {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+// Compact "time to weaponize" — hours between scraping a canary and replaying it.
+function fmtHours(h) {
+  if (h == null) return '—'
+  if (h < 1) return `${Math.round(h * 60)}m`
+  if (h < 48) return `${Math.round(h)}h`
+  return `${Math.round(h / 24)}d`
+}
+
 const CRAWLER_TYPE_LABEL = {
   'search-engine': 'Search Engine',
   'llm-crawler': 'LLM Crawler',
@@ -142,6 +150,58 @@ export default function Intel() {
           </div>
         ))}
       </div>
+
+      {/* Honeytoken tripwires — planted canary credentials caught being replayed.
+          The full scrape -> harvest -> replay attack chain, proven end to end. */}
+      <section className="intel-creds intel-canary">
+        <div className="intel-creds-head">
+          <h2>Honeytoken tripwires</h2>
+          <p className="intel-card-sub">
+            We plant unique fake credentials inside the honeypot config files (a fake <code>.env</code>,
+            <code> wp-config.php</code>). When an attacker scrapes one and later replays it against a login
+            form, we catch the whole chain — <b>scrape → harvest → replay</b>. These values are never
+            published anywhere, so a match is hard proof the attacker harvested them from us.
+          </p>
+        </div>
+
+        <div className="intel-stats intel-creds-stats">
+          {[
+            { label: 'Credential Replays', value: creds?.canary?.stats?.total_replays },
+            { label: 'Tokens Tripped', value: creds?.canary?.stats?.tokens_tripped },
+            { label: 'Attacker IPs', value: creds?.canary?.stats?.attacker_ips },
+            { label: 'Same-Host Chains', value: creds?.canary?.stats?.same_host_chains },
+          ].map(s => (
+            <div key={s.label} className="intel-stat">
+              <span className="intel-stat-value">{fmt(s.value)}</span>
+              <span className="intel-stat-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="intel-card intel-card-wide">
+          <h2>Recent tripwire hits</h2>
+          <p className="intel-card-sub">Planted credentials caught being replayed against our login traps</p>
+          {creds?.canary?.events?.length > 0 ? (
+            <div className="intel-table">
+              <div className="intel-table-head canary-cols"><span>Planted credential</span><span>Replayed via</span><span>From</span><span>Attack chain</span></div>
+              {creds.canary.events.map((e, i) => (
+                <div key={`${e.source}-${i}`} className="intel-table-row canary-cols">
+                  <span className="mono ellipsis">{e.source}</span>
+                  <span className="mono">{e.replayed_via || '—'}</span>
+                  <span className="ellipsis">{e.ip}{e.country ? ` · ${e.country}` : ''}</span>
+                  <span className={e.same_ip_scraped ? 'chain-same' : 'chain-shared'}>
+                    {e.same_ip_scraped
+                      ? (e.hours_to_weaponize != null
+                          ? `Same host · ${fmtHours(e.hours_to_weaponize)} to weaponize`
+                          : 'Same host')
+                      : 'Different host (shared)'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : <div className="intel-empty">No planted credentials replayed yet — the tripwires are armed</div>}
+        </div>
+      </section>
 
       {/* Credential attacks — what usernames/passwords attackers try against
           the honeypot login traps. One of the most compelling data sets we hold. */}

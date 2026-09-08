@@ -7,6 +7,13 @@
  * engaged long enough to fingerprint them and encourage further probing.
  */
 
+import { HONEYTOKENS } from '../utilities/honeytokens.js';
+
+// Planted canary values, keyed "<source>:<field>", interpolated into the fake
+// files below. honeytokens.js is the single source of truth shared with the
+// replay detector, so what we plant always matches what we watch for.
+const HT = Object.fromEntries(HONEYTOKENS.map((t) => [`${t.source}:${t.field}`, t.value]));
+
 function trap(type) {
     return (req, res, next) => {
         req.isTrap = true;
@@ -29,11 +36,11 @@ DB_CONNECTION=pgsql
 DB_HOST=db.internal.botwatch.xyz
 DB_PORT=5432
 DB_DATABASE=botwatch_prod
-DB_USERNAME=bw_admin
-DB_PASSWORD=Xp9#mK2$vL7@nR4
+DB_USERNAME=${HT['.env:DB_USERNAME']}
+DB_PASSWORD=${HT['.env:DB_PASSWORD']}
 
 REDIS_HOST=redis.internal.botwatch.xyz
-REDIS_PASSWORD=rK8$pM3#wN6@vT1
+REDIS_PASSWORD=${HT['.env:REDIS_PASSWORD']}
 REDIS_PORT=6379
 
 AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
@@ -47,8 +54,8 @@ STRIPE_SECRET=${'rk_live_' + '51HxEXAMPLEsEcReT000fake'}
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.mailgun.org
 MAIL_PORT=587
-MAIL_USERNAME=postmaster@botwatch.xyz
-MAIL_PASSWORD=mg-fake-password-here
+MAIL_USERNAME=${HT['.env:MAIL_USERNAME']}
+MAIL_PASSWORD=${HT['.env:MAIL_PASSWORD']}
 
 PUSHER_APP_ID=123456
 PUSHER_APP_KEY=fake_pusher_key_here
@@ -114,7 +121,7 @@ export const fakeWpConfig = [trap('wp-config'), (req, res) => {
 `<?php
 define('DB_NAME', 'botwatch_wp');
 define('DB_USER', 'wp_admin');
-define('DB_PASSWORD', 'Wp@dMin#2024!fake');
+define('DB_PASSWORD', '${HT['wp-config.php:DB_PASSWORD']}');
 define('DB_HOST', 'localhost');
 define('AUTH_KEY',         'fake-key-here-do-not-use');
 define('SECURE_AUTH_KEY',  'fake-key-here-do-not-use');

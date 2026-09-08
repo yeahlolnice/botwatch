@@ -36,7 +36,10 @@ import {
     getTopAttemptedPasswordsQuery,
     getTopCredentialPairsQuery,
     getCredentialAttemptStatsQuery,
+    getCanaryReplayStatsQuery,
+    getCanaryReplayEventsQuery,
 } from '../utilities/sqlTrackingQuerys.js';
+import { HONEYTOKEN_VALUES, HONEYTOKEN_TRAP_TYPES, HONEYTOKENS } from '../utilities/honeytokens.js';
 
 const HOSTNAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 
@@ -131,12 +134,33 @@ export const getPublicThreatCharts = async (req, res) => {
 // one-off possibly-real secret never surfaces on this public endpoint.
 export const getPublicCredentialAttacks = async (req, res) => {
     try {
-        const [stats, usernames, passwords, pairs] = await Promise.all([
+        const tokenArgs = [HONEYTOKEN_VALUES, HONEYTOKEN_TRAP_TYPES];
+        const [stats, usernames, passwords, pairs, canaryStats, canaryEvents] = await Promise.all([
             query(getCredentialAttemptStatsQuery),
             query(getTopAttemptedUsernamesQuery),
             query(getTopAttemptedPasswordsQuery),
             query(getTopCredentialPairsQuery),
+            query(getCanaryReplayStatsQuery, tokenArgs),
+            query(getCanaryReplayEventsQuery, tokenArgs),
         ]);
+
+        // Map each tripped token back to where it was planted (source + field),
+        // and mask the attacker IP — the value itself is our own canary, safe to
+        // show; the IP is masked like everywhere else on the public surface.
+        const tokenMeta = new Map(HONEYTOKENS.map((t) => [t.value, t]));
+        const events = canaryEvents.rows.map((r) => {
+            const meta = tokenMeta.get(r.token);
+            return {
+                source: meta ? `${meta.source} ${meta.field}` : 'planted credential',
+                type: meta?.type || null,
+                ip: maskIp(r.ip_address),
+                country: r.country,
+                replayed_at: r.replayed_at,
+                replayed_via: r.replayed_via,
+                same_ip_scraped: r.same_ip_scraped,
+                hours_to_weaponize: r.hours_to_weaponize == null ? null : Number(r.hours_to_weaponize),
+            };
+        });
 
         res.set('Cache-Control', 'public, max-age=60');
         return res.json({
@@ -144,6 +168,7 @@ export const getPublicCredentialAttacks = async (req, res) => {
             topUsernames: usernames.rows,
             topPasswords: passwords.rows,
             topPairs: pairs.rows,
+            canary: { stats: canaryStats.rows[0] || {}, events },
         });
     } catch (error) {
         console.error('Public credential attacks error:', error);
