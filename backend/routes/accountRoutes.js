@@ -1,7 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireCustomer } from '../middleware/requireCustomer.js';
-import { loginLimiter } from '../middleware/rateLimiter.js';
+import { loginLimiter, forgotLimiter } from '../middleware/rateLimiter.js';
 import {
     signup, login, logout, me,
     getAccount, listKeys, createKey, revokeKey,
@@ -18,7 +18,7 @@ const router = express.Router();
 router.post('/signup', loginLimiter, signup);
 router.post('/login', loginLimiter, login);
 router.post('/logout', logout);
-router.post('/forgot', loginLimiter, forgotPassword);
+router.post('/forgot', forgotLimiter, forgotPassword);
 router.post('/reset', loginLimiter, resetPassword);
 router.post('/verify', verifyEmail);
 

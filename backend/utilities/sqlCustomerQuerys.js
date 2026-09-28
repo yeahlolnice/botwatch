@@ -116,6 +116,13 @@ INSERT INTO password_reset (customer_id, token_hash, expires_at)
 VALUES ($1, $2, $3) RETURNING id;
 `;
 
+// Per-address cooldown for /forgot. Rows are invalidated, never deleted, so this
+// counts every reset issued to the customer in the last hour.
+export const recentPasswordResetsQuery = `
+SELECT COUNT(*)::int AS recent, MAX(created_at) AS last_at FROM password_reset
+WHERE customer_id = $1 AND created_at > NOW() - INTERVAL '1 hour';
+`;
+
 export const getValidPasswordResetQuery = `
 SELECT id, customer_id FROM password_reset
 WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW();
