@@ -17,6 +17,7 @@ import {
     revokeCustomerKeyQuery,
     invalidateCustomerResetsQuery,
     insertPasswordResetQuery,
+    recentPasswordResetsQuery,
     getValidPasswordResetQuery,
     markPasswordResetUsedQuery,
     updateCustomerPasswordQuery,
@@ -210,30 +211,45 @@ export const revokeKey = async (req, res) => {
 export const forgotPassword = async (req, res) => {
     const email = (req.body?.email || '').toLowerCase().trim();
     const generic = { ok: true, message: 'If that email has an account, a reset link is on its way.' };
-    if (!EMAIL_RE.test(email)) return res.json(generic);
-
-    try {
-        const c = (await query(getCustomerByEmailQuery, [email])).rows[0];
-        if (c) {
-            const token = crypto.randomBytes(32).toString('base64url');
-            const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
-            await query(invalidateCustomerResetsQuery, [c.id]);
-            await query(insertPasswordResetQuery, [c.id, sha256(token), expires]);
-
-            const link = `${baseUrl(req)}/account/reset?token=${token}`;
-            await sendEmail({
-                to: c.email,
-                subject: 'Reset your botwatch password',
-                text: `Reset your botwatch password:\n${link}\n\nThis link expires in 1 hour. If you didn't request it, ignore this email.`,
-                html: `<p>Reset your botwatch password:</p><p><a href="${link}">${link}</a></p><p>This link expires in 1 hour. If you didn't request it, you can ignore this email.</p>`,
-            });
-        }
-        return res.json(generic);
-    } catch (error) {
+    // Respond before touching the DB or mail provider: the same response and the
+    // same timing whether the account exists, doesn't, or is on cooldown.
+    res.json(generic);
+    if (!EMAIL_RE.test(email)) return;
+    issuePasswordReset(email, baseUrl(req)).catch((error) => {
         console.error('forgotPassword error:', error.message);
-        return res.json(generic); // stay generic even on error — never leak existence
-    }
+    });
 };
+
+// Per-address limits. The per-IP forgotLimiter can't stop a distributed attack on
+// one inbox, and every send burns shared Resend quota (report emails included).
+export const RESET_COOLDOWN_MS = 60 * 1000;
+export const RESET_MAX_PER_HOUR = 3;
+
+export function resetAllowed({ recent = 0, last_at = null } = {}, now = Date.now()) {
+    if (recent >= RESET_MAX_PER_HOUR) return false;
+    if (last_at && now - new Date(last_at).getTime() < RESET_COOLDOWN_MS) return false;
+    return true;
+}
+
+async function issuePasswordReset(email, origin) {
+    const c = (await query(getCustomerByEmailQuery, [email])).rows[0];
+    if (!c) return;
+    const usage = (await query(recentPasswordResetsQuery, [c.id])).rows[0];
+    if (!resetAllowed(usage)) return;
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+    await query(invalidateCustomerResetsQuery, [c.id]);
+    await query(insertPasswordResetQuery, [c.id, sha256(token), expires]);
+
+    const link = `${origin}/account/reset?token=${token}`;
+    await sendEmail({
+        to: c.email,
+        subject: 'Reset your botwatch password',
+        text: `Reset your botwatch password:\n${link}\n\nThis link expires in 1 hour. If you didn't request it, ignore this email.`,
+        html: `<p>Reset your botwatch password:</p><p><a href="${link}">${link}</a></p><p>This link expires in 1 hour. If you didn't request it, you can ignore this email.</p>`,
+    });
+}
 
 // POST /api/account/reset { token, password } — consume a reset token and set a
 // new password. Token is single-use and time-limited.
